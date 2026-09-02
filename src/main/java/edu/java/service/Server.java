@@ -8,6 +8,8 @@ import org.apache.logging.log4j.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import edu.java.api.Config;
+import edu.java.api.OpenAIChat;
 import edu.java.util.SchemaBuilder;
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
@@ -49,25 +51,25 @@ public abstract class Server {
     // -------------------------------------------------------------------------
 
     /**
-     * MCP2AI Tool — {@code review}.
+     * MCP2AI Tool - {@code review}.
      *
      * <p>
      * Validation/Review: validates and reviews the user and assistant prompts processed by a LLM with another LLM to provide
      * feedback. Accepts two required and one optional parameter:
      * <ul>
-     * <li>{@code user_message} (string, required) — the original user input sent to the AI assistant</li>
-     * <li>{@code assistant_message} (string, required) — the AI assistant response to be reviewed</li>
-     * <li>{@code temperature} (number, optional) — temperature for the reviewing LLM call; falls back to the
-     *     server-configured default when absent</li>
+     * <li>{@code user_message} (string, required) - the original user input sent to the AI assistant</li>
+     * <li>{@code assistant_message} (string, required) - the AI assistant response to be reviewed</li>
+     * <li>{@code temperature} (number, optional) - temperature for the reviewing LLM call; falls back to the server-configured
+     * default when absent</li>
      * </ul>
      *
      * <p>
      * Returns a {@link TextContent} whose body is a JSON object with four fields:
      * <ul>
-     * <li>{@code verdict} — {@code "PASS"}, {@code "FAIL"}, or {@code "PARTIAL"}</li>
-     * <li>{@code confidence} — float 0.0–1.0 representing the reviewer's self-assessed certainty</li>
-     * <li>{@code feedback} — explanation of issues or confirmation of correctness</li>
-     * <li>{@code model_used} — the model that produced the review (traceability)</li>
+     * <li>{@code verdict} - {@code "PASS"}, {@code "FAIL"}, or {@code "PARTIAL"}</li>
+     * <li>{@code confidence} - float 0.0–1.0 representing the reviewer's self-assessed certainty</li>
+     * <li>{@code feedback} - explanation of issues or confirmation of correctness</li>
+     * <li>{@code model_used} - the model that produced the review (traceability)</li>
      * </ul>
      *
      * @return the fully configured {@link AsyncToolSpecification} ready for registration
@@ -88,27 +90,29 @@ public abstract class Server {
         //@formatter:on
         return new AsyncToolSpecification(tool, (exchange, callToolRequest) -> {
             logger.info("Executing [MCP2AI Primitives:Tool] 'review' with arguments: {}", callToolRequest.arguments());
-            @SuppressWarnings("unused")
-            String userMsg      = (String) callToolRequest.arguments().get("user_message");
-            @SuppressWarnings("unused")
+            String userMsg = (String) callToolRequest.arguments().get("user_message");
             String assistantMsg = (String) callToolRequest.arguments().get("assistant_message");
             // Temperature is optional: MCP client sends a number → deserialized as Double; absent → null
-            @SuppressWarnings("unused")
-            Double temperature  = (Double) callToolRequest.arguments().get("temperature");
+            Double temperature = (Double) callToolRequest.arguments().get("temperature");
 
-            // TODO: replace stub values with actual LLM review call; pass temperature (null = use server default)
-            Map<String, Object> result = new java.util.HashMap<>();
-            result.put("verdict",    "PASS");
-            result.put("confidence", 0.99);
-            result.put("feedback",   "I completely agree");
-            result.put("model_used", "stub");
-
-            //@formatter:off
-            return Mono.just(CallToolResult.builder()
-                    .content(List.of(TextContent.builder(toJson(result)).build()))
-                    .isError(false)
-                    .build());
-            //@formatter:on
+            // Invoke review by a LLM
+            try {
+                Map<String, Object> result = new OpenAIChat().review(userMsg, assistantMsg, Config.getModel(), temperature);
+                //@formatter:off
+                return Mono.just(CallToolResult.builder()
+                        .content(List.of(TextContent.builder(toJson(result)).build()))
+                        .isError(false)
+                        .build());
+                //@formatter:on
+            } catch (Exception e) {
+                logger.error("Review tool call failed: {}", e.getMessage(), e);
+                //@formatter:off
+                return Mono.just(CallToolResult.builder()
+                        .content(List.of(TextContent.builder(e.getMessage()).build()))
+                        .isError(true)
+                        .build());
+                //@formatter:on
+            }
         });
     }
 

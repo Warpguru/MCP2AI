@@ -43,7 +43,7 @@
 		-->
 		<Logger name="edu.java" level="ALL" additivity="false">
 			<AppenderRef ref="ConsoleAppender">
-				<LevelRangeFilter minLevel="INFO" maxLevel="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+				<LevelRangeFilter minLevel="FATAL" maxLevel="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
 			</AppenderRef>
 			<AppenderRef ref="FileAppender" />
 		</Logger>

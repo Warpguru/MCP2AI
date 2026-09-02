@@ -1,4 +1,4 @@
-# MCP Tools — Architectural Summary
+# MCP Tools - Architectural Summary
 
 ## Context
 
@@ -17,8 +17,8 @@ A Java MCP server exposing **two tools** and using the `com.openai:openai-java` 
 **Parameters:** none
 
 **Implementation:**
-- Call `client.models().list().data()` — returns `List<Model>`, all on one page (`hasNextPage()` is always `false`)
-- Each `Model` has `.id()` (String) and `.ownedBy()` (String) — no capability fields
+- Call `client.models().list().data()` - returns `List<Model>`, all on one page (`hasNextPage()` is always `false`)
+- Each `Model` has `.id()` (String) and `.ownedBy()` (String) - no capability fields
 - Infer capabilities from model ID string patterns (case-insensitive):
 
 | Pattern in ID | Capability tag |
@@ -32,7 +32,7 @@ A Java MCP server exposing **two tools** and using the `com.openai:openai-java` 
 | anything else | `chat` |
 
 - Return sorted list of `{ id: string, capabilities: string[] }`
-- On any exception: return empty list, log warning — never propagate the error
+- On any exception: return empty list, log warning - never propagate the error
 
 **Reference implementation:** `edu.java.util.ModelsDiscovery` in the companion `MCP2AI` project already implements this logic exactly.
 
@@ -40,15 +40,15 @@ A Java MCP server exposing **two tools** and using the `com.openai:openai-java` 
 
 ### Tool 2: `review_result`
 
-**Purpose:** Submit Bob's answer to a second, independent LLM for validation. The reviewer uses a different model from Bob's primary LLM — the architectural value comes from that independence.
+**Purpose:** Submit Bob's answer to a second, independent LLM for validation. The reviewer uses a different model from Bob's primary LLM - the architectural value comes from that independence.
 
 **Parameters:**
-- `user_prompt` (string) — the original question the user asked Bob
-- `bob_answer` (string) — Bob's proposed answer
+- `user_prompt` (string) - the original question the user asked Bob
+- `bob_answer` (string) - Bob's proposed answer
 
 **Implementation:**
-- Single `chat.completions.create()` call — **not** multi-turn
-- Temperature: `0.0` supplied via `.temperature(0.0)` on `ChatCompletionCreateParams.builder()` — deterministic, consistent verdicts. Use `0.01` instead of exactly `0.0` for local Ollama models that handle the zero boundary poorly.
+- Single `chat.completions.create()` call - **not** multi-turn
+- Temperature: `0.0` supplied via `.temperature(0.0)` on `ChatCompletionCreateParams.builder()` - deterministic, consistent verdicts. Use `0.01` instead of exactly `0.0` for local Ollama models that handle the zero boundary poorly.
 - System message: the reviewer's instructions (baked into server, overridable via `REVIEWER_SYSTEM_PROMPT` env var)
 - User message: `"Question: <user_prompt>\n\nAnswer to review:\n<bob_answer>"`
 
@@ -67,19 +67,19 @@ Return a JSON object with exactly these fields:
 Return only the JSON object. No preamble, no explanation outside the JSON.
 ```
 
-**How verdict and confidence are produced:** The LLM determines the verdict itself during inference by reasoning over the question and answer and following the system prompt's output format instructions. The `confidence` value is the model's own self-assessed certainty — not a statistical guarantee, but a useful signal (a model reporting `0.3` is telling you it is uncertain). Neither value comes from the SDK; both come from the LLM's text output and must be parsed by the server.
+**How verdict and confidence are produced:** The LLM determines the verdict itself during inference by reasoning over the question and answer and following the system prompt's output format instructions. The `confidence` value is the model's own self-assessed certainty - not a statistical guarantee, but a useful signal (a model reporting `0.3` is telling you it is uncertain). Neither value comes from the SDK; both come from the LLM's text output and must be parsed by the server.
 
 **How to extract verdict and confidence from the SDK response:**
 
 ```java
 String raw = response.choices().get(0).message().content().orElse("{}");
 
-// Local models sometimes wrap JSON in markdown fences — strip them first
+// Local models sometimes wrap JSON in markdown fences - strip them first
 raw = raw.replaceAll("(?s)```json\\s*(.*?)\\s*```", "$1").trim();
 // Also handle plain ``` fences
 raw = raw.replaceAll("(?s)```\\s*(.*?)\\s*```", "$1").trim();
 
-// Jackson is already a transitive dependency of com.openai:openai-java — no extra dep needed
+// Jackson is already a transitive dependency of com.openai:openai-java - no extra dep needed
 ObjectMapper mapper = new ObjectMapper();
 try {
     JsonNode node = mapper.readTree(raw);
@@ -87,16 +87,16 @@ try {
     double confidence = node.get("confidence").asDouble();   // 0.0–1.0
     String feedback   = node.get("feedback").asText();
 } catch (JsonProcessingException e) {
-    // Model ignored the format instruction — return a safe fallback
+    // Model ignored the format instruction - return a safe fallback
     // treat raw text as feedback, confidence low, verdict PARTIAL
 }
 ```
 
-**Enforcing JSON output format:** Where the endpoint supports it, add `.responseFormat(ResponseFormatJsonObject.builder().build())` to `ChatCompletionCreateParams`. This forces the model to produce only valid JSON, eliminating markdown fence wrapping. Most OpenAI cloud models support this; most local Ollama models do **not** — always implement the fallback parsing regardless.
+**Enforcing JSON output format:** Where the endpoint supports it, add `.responseFormat(ResponseFormatJsonObject.builder().build())` to `ChatCompletionCreateParams`. This forces the model to produce only valid JSON, eliminating markdown fence wrapping. Most OpenAI cloud models support this; most local Ollama models do **not** - always implement the fallback parsing regardless.
 
 **Return value:** parsed `verdict`, `confidence`, `feedback`, plus `model_used` and `endpoint` added by the server for traceability.
 
-**Why a different model matters:** A reviewer on the same model as Bob shares the same training biases and blind spots. A smaller local model (e.g. `llama3.2:3b`) reviewing output from a large cloud model (e.g. `gpt-4o`) provides genuine independence — it has no social pressure to agree and no knowledge of what the "expected" answer is.
+**Why a different model matters:** A reviewer on the same model as Bob shares the same training biases and blind spots. A smaller local model (e.g. `llama3.2:3b`) reviewing output from a large cloud model (e.g. `gpt-4o`) provides genuine independence - it has no social pressure to agree and no knowledge of what the "expected" answer is.
 
 ---
 
@@ -106,7 +106,7 @@ try {
 
 **Rejected as a Bobcoin-saving mechanism** for the following reason:
 
-When Bob calls an MCP tool, the full tool input and output are recorded in the Messages transcript. If Bob calls `optimize_input(2000-token prompt)` and receives back `1000 tokens`, the transcript now contains **3000+ tokens** of prompt content — worse than doing nothing.
+When Bob calls an MCP tool, the full tool input and output are recorded in the Messages transcript. If Bob calls `optimize_input(2000-token prompt)` and receives back `1000 tokens`, the transcript now contains **3000+ tokens** of prompt content - worse than doing nothing.
 
 There is **no interception point inside Bob** where a tool result can replace a user message before it enters the context. The `@file` operator, user messages, and tool results all enter the transcript immediately and in full.
 
@@ -114,7 +114,7 @@ There is **no interception point inside Bob** where a tool result can replace a 
 1. Open a separate chat (zero transcript overhead)
 2. Paste raw text, request compression
 3. Copy optimized result
-4. Open a new chat, paste only the optimized text — the original never appears in that context
+4. Open a new chat, paste only the optimized text - the original never appears in that context
 
 This requires no MCP server. It is pure workflow discipline.
 
@@ -136,7 +136,7 @@ Resolution order: **env var → config file → hard-coded default**
 | `REVIEWER_SYSTEM_PROMPT` | Override the default reviewer system prompt | *(built-in default)* |
 | `REVIEWER_TEMPERATURE` | Temperature for `review_result` | `0.0` |
 
-All values must be trimmed (`.trim()`) — Windows `set KEY=value` commands append trailing spaces that cause `400: invalid model ID` errors.
+All values must be trimmed (`.trim()`) - Windows `set KEY=value` commands append trailing spaces that cause `400: invalid model ID` errors.
 
 ---
 
@@ -153,13 +153,13 @@ OpenAIOkHttpClient.builder()
     .build();
 ```
 
-The 2-minute timeout is important — the SDK default is 10 minutes, and `RetryingHttpClient` retries twice, so a stuck local model can block for 30 minutes without an explicit cap.
+The 2-minute timeout is important - the SDK default is 10 minutes, and `RetryingHttpClient` retries twice, so a stuck local model can block for 30 minutes without an explicit cap.
 
 **`list_models` call:**
 ```java
 List<Model> models = client.models().list().data();
 // Model fields: .id() (String), .ownedBy() (String)
-// No capability fields — infer from ID string patterns (see above)
+// No capability fields - infer from ID string patterns (see above)
 ```
 
 **`review_result` call:**
@@ -172,7 +172,7 @@ ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
     .build();
 
 ChatCompletion response = client.chat().completions().create(params);
-// Raw content — parse JSON manually (see "review_result" section above for full parsing logic)
+// Raw content - parse JSON manually (see "review_result" section above for full parsing logic)
 String raw = response.choices().get(0).message().content().orElse("{}");
 ```
 
@@ -183,9 +183,9 @@ String raw = response.choices().get(0).message().content().orElse("{}");
 | Issue | Correct API |
 |---|---|
 | `ChatCompletionUserMessageParam` has no `addContentPart()` | Use `.contentOfArrayOfContentParts(List<ChatCompletionContentPart>)` |
-| `SpeechCreateParams.Voice.NOVA` does not exist | `Voice` is a sealed union — use `.voice("nova")` |
+| `SpeechCreateParams.Voice.NOVA` does not exist | `Voice` is a sealed union - use `.voice("nova")` |
 | `TranscriptionCreateParams.model()` | Takes `AudioModel`, not `TranscriptionModel` |
-| `client.audio().transcriptions().create()` | Returns sealed `TranscriptionCreateResponse` — call `.asTranscription().text()` |
+| `client.audio().transcriptions().create()` | Returns sealed `TranscriptionCreateResponse` - call `.asTranscription().text()` |
 | `ImageModel.DALL_E_2` | From `com.openai.models.images.ImageModel`, not `ImageGenerateParams.Model` |
 | `ImagesResponse.data()` | Returns `Optional<List<Image>>` |
 | `Moderation.categories()` | Returns `Moderation.Categories` directly, not `Optional` |
@@ -195,7 +195,7 @@ String raw = response.choices().get(0).message().content().orElse("{}");
 
 ## Token / Cost Architecture (critical understanding)
 
-Bobcoins track both input and output tokens. The full context — system prompt, tool definitions, MCP tool descriptions, rules, skills, and the entire message transcript — is **re-sent to the LLM on every message**. Baseline overhead on a typical project is ~8,500 tokens before any user message.
+Bobcoins track both input and output tokens. The full context - system prompt, tool definitions, MCP tool descriptions, rules, skills, and the entire message transcript - is **re-sent to the LLM on every message**. Baseline overhead on a typical project is ~8,500 tokens before any user message.
 
 Connecting this MCP server adds to the **Tool definitions** and **MCP Tools** categories permanently for the lifetime of the session. This is a fixed per-message cost regardless of whether the tools are ever called.
 
@@ -206,10 +206,10 @@ Connecting this MCP server adds to the **Tool definitions** and **MCP Tools** ca
 ## Reference Implementation
 
 The companion project `MCP2AI` (same repository) contains working implementations of:
-- `edu.java.api.Config` — env var → properties → default config loading with trim
-- `edu.java.api.ClientFactory` — `OpenAIOkHttpClient` construction
-- `edu.java.util.ModelsDiscovery` — `list_models` logic including capability inference
-- `edu.java.examples.ChatExample` — single chat completion call pattern
+- `edu.java.api.Config` - env var → properties → default config loading with trim
+- `edu.java.api.ClientFactory` - `OpenAIOkHttpClient` construction
+- `edu.java.util.ModelsDiscovery` - `list_models` logic including capability inference
+- `edu.java.examples.ChatExample` - single chat completion call pattern
 
 These can be directly copied or adapted for the MCP server implementation.
 

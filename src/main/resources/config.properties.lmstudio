@@ -3,27 +3,19 @@
 # =============================================================================
 # Copy this file to config.properties and set the model name to the one
 # currently loaded in LM Studio (shown in the top bar of the app).
-#
-# LM Studio supports: chat, stream, embed, vision (with multimodal models).
-# TTS, STT, image generation and moderation are not available locally.
 # =============================================================================
 
+# LMStudio url
 OPENAI_BASE_URL=http://localhost:1234/v1
 
 # LM Studio does not require authentication - any non-empty string works
 OPENAI_API_KEY=local
 
-# chat / stream / vision - set to the model name shown in LM Studio
+# LMStudio model
 OPENAI_MODEL=<loaded-model-name>
 
-# embed - LM Studio supports /v1/embeddings with the loaded model
-OPENAI_EMBEDDING_MODEL=<loaded-model-name>
+# LMStudio temperature for the review LLM call (0.0-1.0)
+OPENAI_TEMPERATURE=0.01
 
-# reason  (requires a reasoning-capable model; leave empty if not loaded)
-OPENAI_REASONING_MODEL=
-
-# The following endpoints are not supported by LM Studio - leave empty
-OPENAI_TTS_MODEL=
-OPENAI_STT_MODEL=
-OPENAI_IMAGE_MODEL=
-OPENAI_MODERATION_MODEL=
+# Request timeout in seconds (default: 120 = 2 minutes)
+OPENAI_TIMEOUT=120

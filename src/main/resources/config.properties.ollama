@@ -1,33 +1,22 @@
 # =============================================================================
-# MCP2AI - Ollama local server template
+# MCP2AI - Ollama local server template
 # =============================================================================
 # Copy this file to config.properties and adjust model names to match what
 # you have pulled locally (run: ollama list).
-#
-# Ollama supports: chat, stream, embed, vision, reason (if model supports it).
-# TTS, STT, image generation and moderation are not available locally.
 # =============================================================================
 
+# Ollama url
 OPENAI_BASE_URL=http://localhost:11434/v1
 
-# Ollama does not require authentication - any non-empty string works
+# Ollama does not require authentication â any non-empty string works
 OPENAI_API_KEY=local
 
-# chat / stream / embed  (e.g. llama3.2:3b, mistral:latest, gemma3:1b)
+# Ollama model
 OPENAI_MODEL=llama3.2:3b
 
-# embed  (can reuse the chat model; or a dedicated model like nomic-embed-text)
-OPENAI_EMBEDDING_MODEL=llama3.2:3b
+# Ollama temperature for the review LLM call (0.0-1.0)
+OPENAI_TEMPERATURE=0.01
 
-# reason  (e.g. qwq:latest, deepseek-r1:latest - leave empty if not available)
-OPENAI_REASONING_MODEL=
-
-# vision  (e.g. llama3.2-vision:latest, moondream:latest)
-# Note: set OPENAI_MODEL to this value when running the `vision` command
-# (VisionExample reads OPENAI_MODEL, not a separate key)
-
-# The following endpoints are not supported by Ollama - leave empty
-OPENAI_TTS_MODEL=
-OPENAI_STT_MODEL=
-OPENAI_IMAGE_MODEL=
-OPENAI_MODERATION_MODEL=
+# Request timeout in seconds (default: 120 = 2 minutes)
+# Increase for large local models that are slow to respond.
+OPENAI_TIMEOUT=120

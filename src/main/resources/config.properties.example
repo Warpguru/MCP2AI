@@ -10,8 +10,8 @@
 #   3. Hard-coded default
 #
 # Provider-specific ready-to-use templates:
-#   config.properties.openai  - OpenAI cloud (https://api.openai.com/v1)
-#   config.properties.ollama  - Ollama local server (http://localhost:11434/v1)
+#   config.properties.openai   - OpenAI cloud (https://api.openai.com/v1)
+#   config.properties.ollama   - Ollama local server (http://localhost:11434/v1)
 #   config.properties.lmstudio - LM Studio local server (http://localhost:1234/v1)
 # =============================================================================
 
@@ -26,33 +26,13 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 # Local servers:  any non-empty string (authentication is not checked)
 OPENAI_API_KEY=
 
-# ---------------------------------------------------------------------------
-# Model selection
-# Leave a value empty if the model/feature is not available at your provider.
-# ---------------------------------------------------------------------------
-
-# General-purpose chat / streaming / vision model  (command: chat, stream, vision)
+# Model to use for the review LLM call
 OPENAI_MODEL=
 
-# Embeddings model  (command: embed)
-OPENAI_EMBEDDING_MODEL=
+# Temperature for the review LLM call (0.0-1.0)
+# Use 0.01 instead of exactly 0.0 for local Ollama models that handle the zero boundary poorly.
+OPENAI_TEMPERATURE=0.01
 
-# Reasoning / chain-of-thought model  (command: reason)
-# Defaults to o4-mini if left empty.
-OPENAI_REASONING_MODEL=
-
-# Text-to-speech model  (command: tts)
-# Leave empty if the provider does not support TTS.
-OPENAI_TTS_MODEL=
-
-# Speech-to-text (Whisper) model  (command: stt)
-# Leave empty if the provider does not support STT.
-OPENAI_STT_MODEL=
-
-# Image-generation model  (command: imagegen)
-# Leave empty if the provider does not support image generation.
-OPENAI_IMAGE_MODEL=
-
-# Moderation model  (command: moderate)
-# Leave empty if the provider does not support moderation.
-OPENAI_MODERATION_MODEL=
+# Request timeout in seconds (default: 120 = 2 minutes)
+# Lower this for interactive use; raise it for slow local models.
+OPENAI_TIMEOUT=120

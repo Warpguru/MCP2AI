@@ -1,15 +1,21 @@
 package edu.java.service;
 
+import java.util.List;
+import java.util.function.BiFunction;
+
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 
 import edu.java.MCP2AI;
+import edu.java.api.Config;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.server.McpAsyncServer;
+import io.modelcontextprotocol.server.McpAsyncServerExchange;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification;
 import io.modelcontextprotocol.server.transport.WebFluxStreamableServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.spec.McpSchema.Root;
 import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServer;
@@ -59,7 +65,7 @@ public class StreamableSseServer extends Server {
     // -------------------------------------------------------------------------
 
     /**
-     * MCP2AI Transport — Streamable HTTP (MCP2AI Spec 2025-03-26).
+     * MCP2AI Transport - Streamable HTTP (MCP2AI Spec 2025-03-26).
      *
      * <p>
      * Launches the MCP2AI Server over the Streamable HTTP transport. Unlike the legacy SSE transport which required two
@@ -74,6 +80,9 @@ public class StreamableSseServer extends Server {
      */
     public void processTransportStreamable() {
         logger.info("Starting {} over streamable-http transport...", MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER);
+        // Eagerly load config once at startup so the "not found" message appears here,
+        // not on the first incoming request in a Netty worker thread.
+        Config.load();
         try {
             buildServer();
         } catch (Exception e) {
@@ -134,6 +143,9 @@ public class StreamableSseServer extends Server {
                             .build())
                     .capabilities(capabilities)
                     .tools(toolReview)
+                    // Suppress SDK WARN "no consumers provided" — roots notifications are not used by this server
+                    .rootsChangeHandlers(List.<BiFunction<McpAsyncServerExchange, List<Root>, Mono<Void>>>of(
+                            (exchange, roots) -> { logger.debug("Roots changed (ignored): {}", roots); return Mono.empty(); }))
                     .build();
             //@formatter:on
 
