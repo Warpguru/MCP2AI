@@ -1,0 +1,58 @@
+# =============================================================================
+# MCP2AI - configuration template
+# =============================================================================
+# Copy this file to config.properties (in the same directory) and fill in the
+# values for your provider. config.properties is gitignored.
+#
+# Resolution order for each key:
+#   1. Environment variable (highest priority)
+#   2. config.properties (this file, once renamed)
+#   3. Hard-coded default
+#
+# Provider-specific ready-to-use templates:
+#   config.properties.openai  - OpenAI cloud (https://api.openai.com/v1)
+#   config.properties.ollama  - Ollama local server (http://localhost:11434/v1)
+#   config.properties.lmstudio - LM Studio local server (http://localhost:1234/v1)
+# =============================================================================
+
+# Base URL of the OpenAI-compatible API endpoint
+# OpenAI cloud:   https://api.openai.com/v1
+# Ollama:         http://localhost:11434/v1
+# LM Studio:      http://localhost:1234/v1
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# API key
+# OpenAI cloud:   your real sk-... key
+# Local servers:  any non-empty string (authentication is not checked)
+OPENAI_API_KEY=
+
+# ---------------------------------------------------------------------------
+# Model selection
+# Leave a value empty if the model/feature is not available at your provider.
+# ---------------------------------------------------------------------------
+
+# General-purpose chat / streaming / vision model  (command: chat, stream, vision)
+OPENAI_MODEL=
+
+# Embeddings model  (command: embed)
+OPENAI_EMBEDDING_MODEL=
+
+# Reasoning / chain-of-thought model  (command: reason)
+# Defaults to o4-mini if left empty.
+OPENAI_REASONING_MODEL=
+
+# Text-to-speech model  (command: tts)
+# Leave empty if the provider does not support TTS.
+OPENAI_TTS_MODEL=
+
+# Speech-to-text (Whisper) model  (command: stt)
+# Leave empty if the provider does not support STT.
+OPENAI_STT_MODEL=
+
+# Image-generation model  (command: imagegen)
+# Leave empty if the provider does not support image generation.
+OPENAI_IMAGE_MODEL=
+
+# Moderation model  (command: moderate)
+# Leave empty if the provider does not support moderation.
+OPENAI_MODERATION_MODEL=

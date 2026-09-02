@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+
+	<Appenders>
+		<!-- 
+		  ConsoleAppender: Writes to standard output.
+		  Plain message-only format so the console output reads like normal program output.
+		-->
+		<Console name="ConsoleAppender" target="SYSTEM_OUT">
+			<PatternLayout pattern="%msg%n" />
+		</Console>
+
+		<!-- 
+		  FileAppender: Writes structured diagnostics to "MCP2AI.log".
+		  Full pattern including timestamp, thread, level, and source location.
+		-->
+		<RollingFile name="FileAppender"
+			fileName="MCP2AI.log"
+			filePattern="MCP2AI-%d{yyyy-MM-dd}.log"
+			immediateFlush="true"
+			append="true">
+			<PatternLayout
+				pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-30.30t] %-5level %-45logger{1.1.1}:%4L - %msg%n" />
+			<Policies>
+				<TimeBasedTriggeringPolicy interval="1" />
+			</Policies>
+		</RollingFile>
+	</Appenders>
+
+	<Loggers>
+		<!--
+		  Root Logger: Catches third-party library logging (e.g. OkHttp, SDK internals).
+		  Routed to the file only to keep the console clean.
+		-->
+		<Root level="WARN">
+			<AppenderRef ref="FileAppender" />
+		</Root>
+
+		<!--
+		  edu.java Logger: Single logger for all application code.
+		  - Console: plain %msg%n, INFO and above - human-readable program output.
+		  - File: full detail, ALL levels - complete diagnostic record.
+		-->
+		<Logger name="edu.java" level="ALL" additivity="false">
+			<AppenderRef ref="ConsoleAppender">
+				<LevelRangeFilter minLevel="INFO" maxLevel="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+			</AppenderRef>
+			<AppenderRef ref="FileAppender" />
+		</Logger>
+
+	</Loggers>
+
+</Configuration>
