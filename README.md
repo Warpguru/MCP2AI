@@ -13,7 +13,7 @@ Both tools delegate to the same configured LLM endpoint and share a single serve
 
 ## Prerequisites
 
-> **⚡ Running the server only requires Java 21.** Maven is only needed if you want to build the project from source. If you already have a pre-built `MCP2AI-1.0.0.jar`, skip straight to [Registering with Bob](#registering-with-bob).
+> **⚡ Running the server only requires Java 21.** Maven is only needed if you want to build the project from source. If you already have a pre-built `MCP2AI-x.y.z.jar`, skip straight to [Registering with Bob](#registering-with-bob).
 
 ### To run MCP2AI (required)
 
@@ -112,7 +112,7 @@ xcopy /E /I .bob\skills\mcp-obfuscate <target-workspace>\.bob\skills\mcp-obfusca
 **From the jar only** — the skills are bundled inside the jar under `.bob/skills/`. Extract them with:
 
 ```cmd
-jar xf MCP2AI-1.0.0.jar .bob/skills/mcp-review .bob/skills/mcp-obfuscate
+jar xf MCP2AI-x.y.z.jar .bob/skills/mcp-review .bob/skills/mcp-obfuscate
 xcopy /E /I .bob\skills\mcp-review   <target-workspace>\.bob\skills\mcp-review
 xcopy /E /I .bob\skills\mcp-obfuscate <target-workspace>\.bob\skills\mcp-obfuscate
 ```
@@ -122,7 +122,7 @@ Then restart Bob in that workspace.
 ### Step 3 — Start MCP2AI and verify
 
 ```cmd
-java -jar target\MCP2AI-1.0.0.jar streamableserver
+java -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 Bob will advertise `mcp__mcp-to-ai__review` and `mcp__mcp-to-ai__obfuscate` as available tools.
@@ -295,7 +295,7 @@ The following document traces a complete obfuscation session end-to-end - user p
 mvn clean source:jar install
 ```
 
-The uber-jar is produced at `target/MCP2AI-1.0.0.jar`. It contains all dependencies and is self-contained.
+The uber-jar is produced at `target/MCP2AI-x.y.z.jar`. It contains all dependencies and is self-contained.
 
 ---
 
@@ -342,7 +342,7 @@ Settings are resolved in this order - the first non-empty value wins:
 ### Check configuration and list available models
 
 ```cmd
-java -jar target\MCP2AI-1.0.0.jar config
+java -jar target\MCP2AI-x.y.z.jar config
 ```
 
 Prints all resolved configuration values (API key masked) and queries the configured endpoint for available models. Run this first to verify your setup before starting the server.
@@ -350,7 +350,7 @@ Prints all resolved configuration values (API key masked) and queries the config
 ### Start the MCP server
 
 ```cmd
-java -jar target\MCP2AI-1.0.0.jar streamableserver
+java -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 The server starts on `http://<MCP_STREAMABLE_HOST>:<MCP_STREAMABLE_PORT>/mcp` (default: `http://127.0.0.1:8081/mcp`) and blocks the terminal. Connect your MCP client to that endpoint.
@@ -362,13 +362,13 @@ Using Java system properties:
 Using a local Ollama model:
 
 ```cmd
-java -DOPENAI_BASE_URL=http://localhost:11434/v1 -DOPENAI_MODEL=llama3.2:3b -DOPENAI_API_KEY=local -jar target\MCP2AI-1.0.0.jar streamableserver
+java -DOPENAI_BASE_URL=http://localhost:11434/v1 -DOPENAI_MODEL=llama3.2:3b -DOPENAI_API_KEY=local -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 Using a large, powerful OpenAI cloud model:
 
 ```cmd
-java -DOPENAI_BASE_URL=https://api.openai.com/v1 -DOPENAI_MODEL=gpt-5.6-sol -DOPENAI_API_KEY=sk-... -DOPENAI_TEMPERATURE=1 -jar target\MCP2AI-1.0.0.jar streamableserver
+java -DOPENAI_BASE_URL=https://api.openai.com/v1 -DOPENAI_MODEL=gpt-5.6-sol -DOPENAI_API_KEY=sk-... -DOPENAI_TEMPERATURE=1 -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 Using environment variables:
@@ -378,7 +378,7 @@ Using environment variables:
 set OPENAI_BASE_URL=http://localhost:11434/v1
 set OPENAI_API_KEY=local
 set OPENAI_MODEL=llama3.2:3b
-java -jar target\MCP2AI-1.0.0.jar streamableserver
+java -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 **Windows (PowerShell):**
@@ -386,7 +386,7 @@ java -jar target\MCP2AI-1.0.0.jar streamableserver
 $env:OPENAI_BASE_URL = "http://localhost:11434/v1"
 $env:OPENAI_API_KEY  = "local"
 $env:OPENAI_MODEL    = "llama3.2:3b"
-java -jar target\MCP2AI-1.0.0.jar streamableserver
+java -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 **Linux / macOS:**
@@ -394,7 +394,7 @@ java -jar target\MCP2AI-1.0.0.jar streamableserver
 export OPENAI_BASE_URL=http://localhost:11434/v1
 export OPENAI_API_KEY=local
 export OPENAI_MODEL=llama3.2:3b
-java -jar target/MCP2AI-1.0.0.jar streamableserver
+java -jar target/MCP2AI-x.y.z.jar streamableserver
 ```
 
 > `set` / `$env:` / `export` are session-scoped - variables are only active for the current terminal window.
@@ -416,7 +416,7 @@ Any OpenAI-compatible local server works.
 ollama pull llama3.2:3b
 copy src\main\resources\config.properties.ollama src\main\resources\config.properties
 mvn clean package
-java -jar target\MCP2AI-1.0.0.jar streamableserver
+java -jar target\MCP2AI-x.y.z.jar streamableserver
 ```
 
 **LM Studio quick-start:**

@@ -87,32 +87,68 @@ The following side-by-side comparison shows the specific changes the secondary L
 ```text
 ## Executive Summary: High-Power Laser Weapons for Counter-Drone Operations
 
-High-power laser systems operating at power levels of 100 kW and above represent a transformative and cost-effective solution for neutralizing unmanned aerial vehicle (UAV) threats across military, critical infrastructure, and border security domains.
+High-power laser systems operating at power levels of 100 kW and above represent
+ a transformative and cost-effective solution for neutralizing unmanned aerial 
+ vehicle (UAV) threats across military, critical infrastructure, and border 
+ security domains.
 
 **Mechanism of Effect**
 
-High-energy lasers (HELs) defeat drones through directed thermal energy. At 100 kW, a focused beam can heat and structurally compromise a drone's airframe, electronics, or propulsion system within seconds of dwell time-sufficient to disable or destroy most commercial and military-grade UAVs at ranges of 1–5 km. The speed-of-light delivery eliminates the lead-time calculation required for kinetic interceptors.
+High-energy lasers (HELs) defeat drones through directed thermal energy. At 
+100 kW, a focused beam can heat and structurally compromise a drone's airframe, 
+electronics, or propulsion system within seconds of dwell time-sufficient to 
+disable or destroy most commercial and military-grade UAVs at ranges of 1–5 km. 
+The speed-of-light delivery eliminates the lead-time calculation required for 
+kinetic interceptors.
 
 **Key Advantages**
 
-- **Cost per engagement**: A laser "shot" costs approximately $1–$5 in electricity, compared to $10,000–$500,000 for conventional missiles or interceptor rounds, making it economically viable against drone swarms.
-- **Deep magazine depth**: As long as the power supply operates, the system can engage continuously-critical against saturation attacks involving dozens or hundreds of drones simultaneously.
-- **Precision and collateral risk**: The beam can be precisely modulated to disable rather than destroy, reducing fragmentation and collateral damage in populated or sensitive areas.
-- **Silent operation**: No acoustic signature during firing, which is operationally significant for position concealment.
+- **Cost per engagement**: A laser "shot" costs approximately $1–$5 in 
+electricity, compared to $10,000–$500,000 for conventional missiles or 
+interceptor rounds, making it economically viable against drone swarms.
+- **Deep magazine depth**: As long as the power supply operates, the system 
+can engage continuously-critical against saturation attacks involving dozens 
+or hundreds of drones simultaneously.
+- **Precision and collateral risk**: The beam can be precisely modulated 
+to disable rather than destroy, reducing fragmentation and collateral 
+damage in populated or sensitive areas.
+- **Silent operation**: No acoustic signature during firing, which is 
+operationally significant for position concealment.
 
 **Operational Limitations**
 
-Atmospheric conditions present the most significant constraint. Fog, rain, dust, and smoke scatter and absorb the beam, degrading effective range and dwell efficiency-sometimes by 40–80% under adverse weather. Beam quality also degrades with thermal blooming at extended ranges. Additionally, reflective or ablative drone coatings can partially mitigate thermal effects, though these countermeasures add weight and complexity to adversary systems.
+Atmospheric conditions present the most significant constraint. Fog, 
+rain, dust, and smoke scatter and absorb the beam, degrading effective 
+range and dwell efficiency-sometimes by 40–80% under adverse weather. 
+Beam quality also degrades with thermal blooming at extended ranges. 
+Additionally, reflective or ablative drone coatings can partially 
+mitigate thermal effects, though these countermeasures add weight and 
+complexity to adversary systems.
 
-Power generation and thermal management remain engineering challenges for mobile or shipborne platforms. A 100 kW continuous-wave laser requires substantial electrical infrastructure and cooling, which constrains integration into smaller ground vehicles or aircraft.
+Power generation and thermal management remain engineering challenges 
+for mobile or shipborne platforms. A 100 kW continuous-wave laser requires 
+substantial electrical infrastructure and cooling, which constrains 
+integration into smaller ground vehicles or aircraft.
 
 **Current Deployment Landscape**
 
-Systems such as the US Army's 100 kW High Energy Laser Mobile Demonstrator (HEL MD), Raytheon's High Energy Laser weapon system (HEL WS), and Israel's Iron Beam (100 kW class) have demonstrated operational engagement of drones, mortars, and rockets in field trials. The UK's DragonFire program, targeting comparable power levels, achieved first successful drone kills in 2024 trials.
+Systems such as the US Army's 100 kW High Energy Laser Mobile Demonstrator 
+(HEL MD), Raytheon's High Energy Laser weapon system (HEL WS), and Israel's 
+Iron Beam (100 kW class) have demonstrated operational engagement of 
+drones, mortars, and rockets in field trials. The UK's DragonFire program, 
+targeting comparable power levels, achieved first successful drone kills 
+in 2024 trials.
 
 **Strategic Assessment**
 
-High-power laser weapons are not a universal replacement for kinetic air defense-they function most effectively as a complementary layer in a multi-tier system. Against small, low-altitude drone threats-particularly swarms of commercial-off-the-shelf UAVs where kinetic interceptors are cost-prohibitive-100 kW-class lasers offer the most economically and operationally sustainable solution currently available. Continued investment in beam quality, power density, and all-weather resilience will determine how rapidly these systems displace legacy counter-UAS methods.
+High-power laser weapons are not a universal replacement for kinetic air 
+defense-they function most effectively as a complementary layer in a 
+multi-tier system. Against small, low-altitude drone threats-particularly 
+swarms of commercial-off-the-shelf UAVs where kinetic interceptors are 
+cost-prohibitive-100 kW-class lasers offer the most economically and 
+operationally sustainable solution currently available. Continued investment 
+in beam quality, power density, and all-weather resilience will determine 
+how rapidly these systems displace legacy counter-UAS methods.
 ```
 
 </td>
@@ -121,32 +157,65 @@ High-power laser weapons are not a universal replacement for kinetic air defense
 ```text
 ## Executive Summary: High-Power Laser Weapons for Counter-Drone Operations
 
-High-power laser systems rated at 100 kW and above offer a major, cost-effective means of neutralizing unmanned aerial vehicle (UAV) threats in military operations, at critical infrastructure sites, and along borders.
+High-power laser systems rated at 100 kW and above offer a major, 
+cost-effective means of neutralizing unmanned aerial vehicle (UAV) threats 
+in military operations, at critical infrastructure sites, and along borders.
 
 **Mechanism of Effect**
 
-High-energy lasers (HELs) defeat drones by directing thermal energy at them. At 100 kW, a focused beam can heat and structurally compromise a drone's airframe, electronics, or propulsion system within seconds of dwell time. That is enough to disable or destroy most commercial and military-grade UAVs at ranges of 1–5 km. Because the beam travels at the speed of light, operators do not need the lead-time calculations required for kinetic interceptors.
+High-energy lasers (HELs) defeat drones by directing thermal energy at them. 
+At 100 kW, a focused beam can heat and structurally compromise a drone's 
+airframe, electronics, or propulsion system within seconds of dwell time. 
+That is enough to disable or destroy most commercial and military-grade UAVs 
+at ranges of 1–5 km. Because the beam travels at the speed of light, operators 
+do not need the lead-time calculations required for kinetic interceptors.
 
 **Key Advantages**
 
-- **Cost per engagement**: A laser "shot" costs approximately $1–$5 in electricity. Conventional missiles or interceptor rounds cost $10,000–$500,000, so lasers are economically viable against drone swarms.
-- **Deep magazine depth**: The system can keep engaging targets as long as its power supply operates. This capacity matters during saturation attacks involving dozens or hundreds of drones simultaneously.
-- **Precision and collateral risk**: Operators can precisely modulate the beam to disable a drone rather than destroy it, reducing fragmentation and collateral damage in populated or sensitive areas.
-- **Silent operation**: Firing produces no acoustic signature, which helps conceal the system's position.
+- **Cost per engagement**: A laser "shot" costs approximately $1–$5 in 
+electricity. Conventional missiles or interceptor rounds cost $10,000–$500,000, 
+so lasers are economically viable against drone swarms.
+- **Deep magazine depth**: The system can keep engaging targets as long as 
+its power supply operates. This capacity matters during saturation attacks 
+involving dozens or hundreds of drones simultaneously.
+- **Precision and collateral risk**: Operators can precisely modulate the 
+beam to disable a drone rather than destroy it, reducing fragmentation and 
+collateral damage in populated or sensitive areas.
+- **Silent operation**: Firing produces no acoustic signature, which helps 
+conceal the system's position.
 
 **Operational Limitations**
 
-Atmospheric conditions are the main constraint. Fog, rain, dust, and smoke scatter and absorb the beam, reducing effective range and dwell efficiency-sometimes by 40–80% in adverse weather. Thermal blooming also degrades beam quality at extended ranges. Reflective or ablative drone coatings can partly reduce thermal effects, although these countermeasures add weight and complexity to adversary systems.
+Atmospheric conditions are the main constraint. Fog, rain, dust, and smoke 
+scatter and absorb the beam, reducing effective range and dwell 
+efficiency-sometimes by 40–80% in adverse weather. Thermal blooming also 
+degrades beam quality at extended ranges. Reflective or ablative drone 
+coatings can partly reduce thermal effects, although these countermeasures 
+add weight and complexity to adversary systems.
 
-Power generation and thermal management remain engineering challenges on mobile or shipborne platforms. A 100 kW continuous-wave laser needs substantial electrical infrastructure and cooling, limiting its integration into smaller ground vehicles or aircraft.
+Power generation and thermal management remain engineering challenges on 
+mobile or shipborne platforms. A 100 kW continuous-wave laser needs 
+substantial electrical infrastructure and cooling, limiting its integration 
+into smaller ground vehicles or aircraft.
 
 **Current Deployment Landscape**
 
-The US Army's 100 kW High Energy Laser Mobile Demonstrator (HEL MD), Raytheon's High Energy Laser weapon system (HEL WS), and Israel's Iron Beam (100 kW class) have demonstrated operational engagement of drones, mortars, and rockets in field trials. The UK's DragonFire program targets comparable power levels and achieved its first successful drone kills in 2024 trials.
+The US Army's 100 kW High Energy Laser Mobile Demonstrator (HEL MD), 
+Raytheon's High Energy Laser weapon system (HEL WS), and Israel's Iron Beam 
+(100 kW class) have demonstrated operational engagement of drones, mortars, 
+and rockets in field trials. The UK's DragonFire program targets comparable 
+power levels and achieved its first successful drone kills in 2024 trials.
 
 **Strategic Assessment**
 
-High-power laser weapons will not replace kinetic air defense in every role. They work best as a complementary layer within a multi-tier system. Against small, low-altitude drone threats-especially swarms of commercial-off-the-shelf UAVs for which kinetic interceptors are cost-prohibitive-100 kW-class lasers provide the most economically and operationally sustainable solution currently available. The pace at which these systems displace legacy counter-UAS methods will depend on continued investment in beam quality, power density, and all-weather resilience.
+High-power laser weapons will not replace kinetic air defense in every role. 
+They work best as a complementary layer within a multi-tier system. Against 
+small, low-altitude drone threats-especially swarms of 
+commercial-off-the-shelf UAVs for which kinetic interceptors are 
+cost-prohibitive-100 kW-class lasers provide the most economically and 
+operationally sustainable solution currently available. The pace at which 
+these systems displace legacy counter-UAS methods will depend on continued 
+investment in beam quality, power density, and all-weather resilience.
 ```
 </td>
 </tr>
