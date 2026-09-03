@@ -8,10 +8,10 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Centralised configuration loader.
+ * Centralised configuration loader - singleton.
  *
  * <p>
- * Resolution order for each key:
+ * Obtain the single instance via {@link #getInstance()}. Resolution order for each key:
  * <ol>
  * <li>Java system property ({@code -Dkey=value} on the command line)</li>
  * <li>OS environment variable</li>
@@ -28,6 +28,13 @@ public class Config {
 
     private static final Logger logger = LogManager.getLogger(Config.class);
 
+    /** Singleton instance; initialised on first call to {@link #getInstance()}. */
+    private static volatile Config instance;
+
+    /** Loaded once on first access; never {@code null} after initialisation. */
+    private final Properties properties;
+
+    /** Default properties file. */
     private static final String FILE_CONFIG_PROPERTIES = "config.properties";
 
     /** Configuration key - base URL of the OpenAI-compatible API endpoint. */
@@ -42,16 +49,195 @@ public class Config {
     /** Configuration key - LLM temperature. */
     private static final String KEY_TEMPERATURE = "OPENAI_TEMPERATURE";
 
+    /** Default LLM temperature. */
+    private static final Float KEY_TEMPERATURE_DEFAULT = 0.01f;
+
     /** Configuration key - request timeout in seconds. */
     private static final String KEY_TIMEOUT = "OPENAI_TIMEOUT";
 
-    /** Lazily loaded; {@code null} means not yet initialised. */
-    private static volatile Properties properties;
+    /** Default request timeout in seconds. */
+    private static final int KEY_TIMEOUT_DEFAULT = 120;
+
+    /** Configuration key - fully qualified path to the review system prompt file. */
+    private static final String KEY_SYSTEMPROMPT_REVIEW = "OPENAI_SYSTEMPROMPT_REVIEW";
+
+    /** Configuration key - fully qualified path to the obfuscate system prompt file. */
+    private static final String KEY_SYSTEMPROMPT_OBFUSCATE = "OPENAI_SYSTEMPROMPT_OBFUSCATE";
+
+    /** Configuration key - bind address for the embedded HTTP server. */
+    private static final String KEY_STREAMABLE_HOST = "MCP_STREAMABLE_HOST";
+
+    /** Default bind address for the embedded HTTP server. */
+    private static final String KEY_STREAMABLE_HOST_DEFAULT = "127.0.0.1";
+
+    /** Configuration key - bind port for the embedded HTTP server. */
+    private static final String KEY_STREAMABLE_PORT = "MCP_STREAMABLE_PORT";
+
+    /** Default bind port for the embedded HTTP server. */
+    private static final int KEY_STREAMABLE_PORT_DEFAULT = 8081;
 
     /**
-     * Hidden constructor.
+     * Private constructor - loads {@code config.properties} from the classpath.
      */
     private Config() {
+        this.properties = loadProperties();
+    }
+
+    // -------------------------------------------------------------------------
+    // Singleton access
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the singleton {@link Config} instance, creating it on first call.
+     *
+     * <p>
+     * Uses double-checked locking for thread-safe lazy initialisation.
+     *
+     * @return the singleton instance, never {@code null}
+     */
+    public static Config getInstance() {
+        if (instance == null) {
+            synchronized (Config.class) {
+                if (instance == null) {
+                    instance = new Config();
+                }
+            }
+        }
+        return instance;
+    }
+
+    // -------------------------------------------------------------------------
+    // Typed getters
+    // -------------------------------------------------------------------------
+
+    /**
+     * Base URL for the OpenAI API endpoint. Defaults to the public OpenAI endpoint.
+     *
+     * @return baseUrl or null if absent
+     */
+    public String getBaseUrl() {
+        String v = getAsString(KEY_BASE_URL);
+        return (v != null && !v.isEmpty()) ? v : null;
+    }
+
+    /**
+     * API key. Defaults to an empty string when {@code OPENAI_API_KEY} is not set; most providers will then reject requests
+     * with an authentication error, which is more helpful than a {@link NullPointerException} inside the SDK.
+     *
+     * @return apiKey, never {@code null}
+     */
+    public String getApiKey() {
+        String v = getAsString(KEY_API_KEY);
+        return (v != null) ? v : "";
+    }
+
+    /**
+     * Chat model. Defaults to {@code gpt-4o-mini}.
+     *
+     * @return model or null if absent
+     */
+    public String getModel() {
+        String v = getAsString(KEY_MODEL);
+        return (v != null && !v.isEmpty()) ? v : null;
+    }
+
+    /**
+     * Model temperature. Defaults to {@code 0.01}.
+     *
+     * @return temperature
+     */
+    public Float getTemperature() {
+        Float f = getAsFloat(KEY_TEMPERATURE);
+        return (f != null) ? f : KEY_TEMPERATURE_DEFAULT;
+    }
+
+    /**
+     * Request timeout in seconds. Defaults to {@code 120} (2 minutes).
+     *
+     * <p>
+     * The SDK default is 10 minutes and retries twice, so without an explicit cap a stuck local model can block for up to 30
+     * minutes. Set {@code OPENAI_TIMEOUT} to a lower value for interactive use.
+     *
+     * @return timeout in seconds, never negative
+     */
+    public Integer getTimeout() {
+        int v = getAsInteger(KEY_TIMEOUT);
+        return (v > 0) ? v : KEY_TIMEOUT_DEFAULT;
+    }
+
+    /**
+     * Fully qualified path to an external file containing the review system prompt.
+     *
+     * <p>
+     * When {@code null}, callers must fall back to their built-in default prompt.
+     *
+     * @return configured path string, or {@code null} if absent or empty
+     */
+    public String getSystemPromptReviewPath() {
+        String v = getAsString(KEY_SYSTEMPROMPT_REVIEW);
+        return (v != null && !v.isEmpty()) ? v : null;
+    }
+
+    /**
+     * Fully qualified path to an external file containing the obfuscate system prompt.
+     *
+     * <p>
+     * When {@code null}, callers must fall back to their built-in default prompt. No call site is wired yet - this getter is
+     * prepared for the future obfuscate tool.
+     *
+     * @return configured path string, or {@code null} if absent or empty
+     */
+    public String getSystemPromptObfuscatePath() {
+        String v = getAsString(KEY_SYSTEMPROMPT_OBFUSCATE);
+        return (v != null && !v.isEmpty()) ? v : null;
+    }
+
+    /**
+     * Bind address for the embedded Streamable HTTP server. Defaults to {@code 127.0.0.1}.
+     *
+     * @return host string, never {@code null}
+     */
+    public String getStreamableHost() {
+        String v = getAsString(KEY_STREAMABLE_HOST);
+        return (v != null && !v.isEmpty()) ? v : KEY_STREAMABLE_HOST_DEFAULT;
+    }
+
+    /**
+     * Bind port for the embedded Streamable HTTP server. Defaults to {@code 8081}.
+     *
+     * @return port number, always positive
+     */
+    public int getStreamablePort() {
+        int v = getAsInteger(KEY_STREAMABLE_PORT);
+        return (v > 0) ? v : KEY_STREAMABLE_PORT_DEFAULT;
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Loads {@code config.properties} from the classpath.
+     *
+     * <p>
+     * Called once from the constructor. If the file is absent the returned {@link Properties} object is empty; callers fall
+     * back to hard-coded defaults.
+     *
+     * @return the loaded (possibly empty) {@link Properties} instance
+     */
+    private Properties loadProperties() {
+        Properties propertiesConfig = new Properties();
+        try (InputStream is = Config.class.getClassLoader().getResourceAsStream(FILE_CONFIG_PROPERTIES)) {
+            if (is != null) {
+                propertiesConfig.load(is);
+                logger.debug("Loaded {}", FILE_CONFIG_PROPERTIES);
+            } else {
+                logger.debug("{} not found on classpath - using env vars and defaults only", FILE_CONFIG_PROPERTIES);
+            }
+        } catch (IOException e) {
+            logger.warn("Failed to read {}: {}", FILE_CONFIG_PROPERTIES, e.getMessage());
+        }
+        return propertiesConfig;
     }
 
     /**
@@ -68,7 +254,7 @@ public class Config {
      * @param key the configuration key
      * @return trimmed value, or {@code null} if absent in all sources
      */
-    public static String getAsString(String key) {
+    public String getAsString(String key) {
         // 1. Java system property (-Dkey=value)
         String sysProp = System.getProperty(key);
         if (sysProp != null && !sysProp.isBlank()) {
@@ -80,7 +266,7 @@ public class Config {
             return envValue.trim();
         }
         // 3. config.properties
-        String propValue = loadProperties().getProperty(key);
+        String propValue = properties.getProperty(key);
         return propValue != null ? propValue.trim() : null;
     }
 
@@ -93,7 +279,7 @@ public class Config {
      * @param key the configuration key
      * @return parsed {@link Float}, or {@code null} if absent in all sources
      */
-    public static Float getAsFloat(String key) {
+    public Float getAsFloat(String key) {
         // 1. Java system property (-Dkey=value)
         String sysProp = System.getProperty(key);
         if (sysProp != null && !sysProp.isBlank()) {
@@ -105,7 +291,7 @@ public class Config {
             return Float.valueOf(envValue.trim());
         }
         // 3. config.properties
-        String propValue = loadProperties().getProperty(key);
+        String propValue = properties.getProperty(key);
         return propValue != null ? Float.valueOf(propValue.trim()) : null;
     }
 
@@ -118,7 +304,7 @@ public class Config {
      * @param key the configuration key
      * @return parsed int, or {@code -1} if absent in all sources
      */
-    public static Integer getAsInt(String key) {
+    public Integer getAsInteger(String key) {
         // 1. Java system property (-Dkey=value)
         String systemProperties = System.getProperty(key);
         if (systemProperties != null && !systemProperties.isBlank()) {
@@ -130,114 +316,8 @@ public class Config {
             return Integer.parseInt(envValue.trim());
         }
         // 3. config.properties
-        String propValue = loadProperties().getProperty(key);
+        String propValue = properties.getProperty(key);
         return propValue != null ? Integer.parseInt(propValue.trim()) : -1;
-    }
-
-    /**
-     * Base URL for the OpenAI API endpoint. Defaults to the public OpenAI endpoint.
-     * 
-     * @return baseUrl or null if absent
-     */
-    public static String getBaseUrl() {
-        String v = getAsString(KEY_BASE_URL);
-        return (v != null && !v.isEmpty()) ? v : null;
-    }
-
-    /**
-     * API key. Defaults to an empty string when {@code OPENAI_API_KEY} is not set; most providers will then reject requests
-     * with an authentication error, which is more helpful than a {@link NullPointerException} inside the SDK.
-     *
-     * @return apiKey, never {@code null}
-     */
-    public static String getApiKey() {
-        String v = getAsString(KEY_API_KEY);
-        return (v != null) ? v : "";
-    }
-
-    /**
-     * Chat model. Defaults to {@code gpt-4o-mini}.
-     * 
-     * @return model or null if absent
-     */
-    public static String getModel() {
-        String v = getAsString(KEY_MODEL);
-        return (v != null && !v.isEmpty()) ? v : null;
-    }
-
-    /**
-     * Model temperature. Defaults to {@code 0.01}.
-     *
-     * @return temperature
-     */
-    public static Float getTemperature() {
-        Float f = getAsFloat(KEY_TEMPERATURE);
-        return (f != null) ? f : Float.valueOf(0.01f);
-    }
-
-    /**
-     * Request timeout in seconds. Defaults to {@code 120} (2 minutes).
-     *
-     * <p>
-     * The SDK default is 10 minutes and retries twice, so without an explicit cap a stuck local model can block for up to 30
-     * minutes. Set {@code OPENAI_TIMEOUT} to a lower value for interactive use.
-     *
-     * @return timeout in seconds, never negative
-     */
-    public static Integer getTimeout() {
-        int v = getAsInt(KEY_TIMEOUT);
-        return (v > 0) ? v : 120;
-    }
-
-    // -------------------------------------------------------------------------
-    // Startup initialisation
-    // -------------------------------------------------------------------------
-
-    /**
-     * Eagerly initialises the configuration by loading {@code config.properties} from the classpath.
-     *
-     * <p>
-     * Calling this once at server startup ensures the "not found" debug message is emitted at a
-     * predictable moment rather than on the first worker-thread request.
-     */
-    public static void load() {
-        loadProperties();
-    }
-
-    // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Loads {@code config.properties} from the classpath on first call and caches the result.
-     *
-     * <p>
-     * Uses double-checked locking to ensure the file is read at most once even under concurrent access. If the file is absent
-     * the returned {@link Properties} object is empty; callers fall back to hard-coded defaults.
-     *
-     * @return the loaded (possibly empty) {@link Properties} instance
-     */
-    private static Properties loadProperties() {
-        if (properties == null) {
-            synchronized (Config.class) {
-                if (properties == null) {
-                    Properties propertiesConfig = new Properties();
-                    try (InputStream is = Config.class.getClassLoader().getResourceAsStream(FILE_CONFIG_PROPERTIES)) {
-                        if (is != null) {
-                            propertiesConfig.load(is);
-                            logger.debug("Loaded {}", FILE_CONFIG_PROPERTIES);
-                        } else {
-                            logger.debug("{} not found on classpath - using env vars and defaults only",
-                                    FILE_CONFIG_PROPERTIES);
-                        }
-                    } catch (IOException e) {
-                        logger.warn("Failed to read {}: {}", FILE_CONFIG_PROPERTIES, e.getMessage());
-                    }
-                    properties = propertiesConfig;
-                }
-            }
-        }
-        return properties;
     }
 
 }

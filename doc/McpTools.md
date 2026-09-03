@@ -142,7 +142,7 @@ All values must be trimmed (`.trim()`) - Windows `set KEY=value` commands append
 
 ## SDK Usage
 
-**Dependency:** `com.openai:openai-java:4.52.0`
+**Dependency:** `com.openai:openai-java:4.56.0`
 
 **Client construction:**
 ```java
@@ -178,7 +178,7 @@ String raw = response.choices().get(0).message().content().orElse("{}");
 
 **Note:** The SDK has no `getConfidence()` or `getVerdict()` method. The verdict, confidence, and feedback all come from parsing the LLM's text output as JSON. The SDK's `ChatCompletion` object only gives you the raw text string.
 
-**Known SDK gotchas** (from source inspection of `openai-java-core-4.52.0-sources.jar`):
+**Known SDK gotchas** (from source inspection of `openai-java-core-4.56.0-sources.jar`):
 
 | Issue | Correct API |
 |---|---|

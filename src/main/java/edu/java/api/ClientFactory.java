@@ -31,15 +31,15 @@ public class ClientFactory {
      * @return {@link OpenAIClient} ready to use or null
      */
     public static OpenAIClient create() {
-        String baseUrl = Config.getBaseUrl();
-        String apiKey = Config.getApiKey();
+        String baseUrl = Config.getInstance().getBaseUrl();
+        String apiKey = Config.getInstance().getApiKey();
         if (Objects.isNull(baseUrl)) {
             return null;
         }
         // Instantiate client
         OpenAIOkHttpClient.Builder builder = OpenAIOkHttpClient.builder()
                 .baseUrl(baseUrl)
-                .timeout(Duration.ofSeconds(Config.getTimeout()));
+                .timeout(Duration.ofSeconds(Config.getInstance().getTimeout()));
         if (apiKey != null && !apiKey.isEmpty()) {
             builder.apiKey(apiKey);
         } else {

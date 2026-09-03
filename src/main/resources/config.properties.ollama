@@ -20,3 +20,15 @@ OPENAI_TEMPERATURE=0.01
 # Request timeout in seconds (default: 120 = 2 minutes)
 # Increase for large local models that are slow to respond.
 OPENAI_TIMEOUT=120
+
+# Fully qualified path to system prompt for review tool (default: hardcoded)
+OPENAI_SYSTEMPROMPT_REVIEW=
+
+# Fully qualified path to system prompt for obfuscate tool (default: hardcoded)
+OPENAI_SYSTEMPROMPT_OBFUSCATE=
+
+# IP address or hostname to bin internal HTTP server  (default: 127.0.0.1)
+MCP_STREAMABLE_HOST=
+
+# IP address or hostname to bin internal HTTP server  (default: )
+MCP_STREAMABLE_PORT=

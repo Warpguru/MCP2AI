@@ -3,8 +3,9 @@ package edu.java.service;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
-import org.springframework.web.reactive.function.server.RouterFunctions;
+import org.apache.catalina.Context;
+import org.apache.catalina.core.StandardContext;
+import org.apache.catalina.startup.Tomcat;
 
 import edu.java.MCP2AI;
 import edu.java.api.Config;
@@ -13,16 +14,15 @@ import io.modelcontextprotocol.server.McpAsyncServer;
 import io.modelcontextprotocol.server.McpAsyncServerExchange;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification;
-import io.modelcontextprotocol.server.transport.WebFluxStreamableServerTransportProvider;
+import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.Root;
 import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.server.HttpServer;
 
 /**
- * MCP2AI Server implementation over HTTP Streamable transport (MCP2AI Spec 2025-03-26) using WebFlux. Inherits all core MCP2AI
- * primitive factory methods from {@link Server}.
+ * MCP2AI Server implementation over HTTP Streamable transport (MCP2AI Spec 2025-03-26) using an embedded Tomcat servlet
+ * container. Inherits all core MCP2AI primitive factory methods from {@link Server}.
  *
  * <p>
  * Streamable HTTP is the modern replacement for the legacy SSE transport. It condenses both the SSE notification channel and
@@ -31,12 +31,6 @@ import reactor.netty.http.server.HttpServer;
  */
 public class StreamableSseServer extends Server {
 
-    /** IP address (typically 127.0.0.1) of MCP2AI Streamable HTTP Server. */
-    public static final String STREAMABLE_HOST = "127.0.0.1";
-    /** Port of MCP2AI Streamable HTTP Server. */
-    public static final String STREAMABLE_PORT = "8081";
-    /** Base address of MCP2AI Streamable HTTP Server. */
-    public static final String STREAMABLE_SERVER = "http" + "://" + STREAMABLE_HOST + ":" + STREAMABLE_PORT;
     /** Unified MCP2AI Streamable HTTP endpoint path (handles both GET and POST). */
     public static final String STREAMABLE_ENDPOINT = "/mcp";
 
@@ -74,15 +68,13 @@ public class StreamableSseServer extends Server {
      * (send a JSON-RPC message and receive a response inline or via SSE).
      *
      * <p>
-     * The server binds strictly to the loopback interface {@link #STREAMABLE_HOST} and {@link #STREAMABLE_PORT}. Delegates all
-     * primitive registration, endpoint routing, and server startup to {@link #buildServer()}. Any fatal startup exception is
-     * logged cleanly and the process shuts down with exit code {@code 1}.
+     * The server binds strictly to the loopback interface resolved from {@code MCP_STREAMABLE_HOST} and
+     * {@code MCP_STREAMABLE_PORT} (defaults: {@code 127.0.0.1:8081}). Delegates all primitive registration, endpoint routing,
+     * and server startup to {@link #buildServer()}. Any fatal startup exception is logged cleanly and the process shuts down
+     * with exit code {@code 1}.
      */
     public void processTransportStreamable() {
         logger.info("Starting {} over streamable-http transport...", MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER);
-        // Eagerly load config once at startup so the "not found" message appears here,
-        // not on the first incoming request in a Netty worker thread.
-        Config.load();
         try {
             buildServer();
         } catch (Exception e) {
@@ -99,80 +91,94 @@ public class StreamableSseServer extends Server {
      * Registers all MCP2AI primitives and starts the Streamable HTTP server.
      *
      * <p>
-     * Initializes the WebFlux Streamable HTTP transport provider, registers server-side capabilities, definitions, and
-     * specifications (Tools, Resources, and Prompts), and spins up a standalone Netty HTTP server listening on the configured
-     * loopback endpoint {@link #STREAMABLE_SERVER}.
+     * Initializes the {@link HttpServletStreamableServerTransportProvider} (MCP SDK 2.x built-in transport), registers
+     * server-side capabilities and tool specifications, and spins up an embedded Tomcat instance listening strictly on the host
+     * and port resolved from {@link Config} ({@code MCP_STREAMABLE_HOST} / {@code MCP_STREAMABLE_PORT}).
      *
      * <p>
-     * Blocks the main thread forever using {@code Mono.never()} to let active background reactive Netty handler threads manage
-     * simultaneous network streams indefinitely.
+     * Blocks the main thread indefinitely via {@code tomcat.getServer().await()} to let the Tomcat connector threads handle
+     * incoming MCP requests.
+     *
+     * @throws Exception if the embedded Tomcat fails to start
      */
-    private void buildServer() {
-        try {
-            // 1. Initialize the WebFlux Streamable HTTP Transport Provider
-            //@formatter:off
-            WebFluxStreamableServerTransportProvider transportProvider = WebFluxStreamableServerTransportProvider
-                    .builder()
-                    .jsonMapper(McpJsonDefaults.getMapper())
-                    .messageEndpoint(STREAMABLE_ENDPOINT)
-                    .build();
-            //@formatter:on
+    @SuppressWarnings("deprecation") // addServletMappingDecoded deprecated in Tomcat 11.0.25 API; no replacement in embedded
+                                     // mode
+    private void buildServer() throws Exception {
+        // Resolve host and port from configuration (falls back to 127.0.0.1:8081 if not set).
+        String host = Config.getInstance().getStreamableHost();
+        int port = Config.getInstance().getStreamablePort();
+        String serverAddress = "http://" + host + ":" + port;
 
-            // 2. Build Server Capabilities (Tools, Resources, Prompts)
-            //@formatter:off
-            ServerCapabilities capabilities = ServerCapabilities
-                    .builder()
-                    .tools(true)
-                    .resources(false, true)
-                    .prompts(true)
-                    .build();
-            //@formatter:on
+        // 1. Initialize the MCP SDK 2.x Streamable HTTP Transport Provider.
+        // HttpServletStreamableServerTransportProvider IS a jakarta.servlet.http.HttpServlet.
+        //@formatter:off
+        HttpServletStreamableServerTransportProvider transportProvider =
+                HttpServletStreamableServerTransportProvider.builder()
+                        .jsonMapper(McpJsonDefaults.getMapper())
+                        .mcpEndpoint(STREAMABLE_ENDPOINT)
+                        .build();
+        //@formatter:on
 
-            // 3. Define and configure all specifications
-            AsyncToolSpecification toolReview = createToolReview();
+        // 2. Build Server Capabilities (Tools, Resources, Prompts)
+        //@formatter:off
+        ServerCapabilities capabilities = ServerCapabilities
+                .builder()
+                .tools(true)
+                .resources(false, true)
+                .prompts(true)
+                .build();
+        //@formatter:on
 
-            // 4. Build and configure the McpAsyncServer
-            //@formatter:off
-            @SuppressWarnings("unused")
-            McpAsyncServer server = McpServer
-                    .async(transportProvider)
-                    .serverInfo(McpSchema.Implementation.builder(MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER, MCP2AI.MCP2AI_VERSION)
-                            .title("MCP2AI Java SDK \u2014 Streamable HTTP Reference Server")
-                            .description("MCP2AI Java SDK reference implementation over Streamable HTTP transport (MCP2AI Spec 2025-03-26). "
-                                    + "Exposes review tool to validate and review the response of an AI assistant.")
-                            .build())
-                    .capabilities(capabilities)
-                    .tools(toolReview)
-                    // Suppress SDK WARN "no consumers provided" — roots notifications are not used by this server
-                    .rootsChangeHandlers(List.<BiFunction<McpAsyncServerExchange, List<Root>, Mono<Void>>>of(
-                            (exchange, roots) -> { logger.debug("Roots changed (ignored): {}", roots); return Mono.empty(); }))
-                    .build();
-            //@formatter:on
+        // 3. Define and configure all specifications
+        AsyncToolSpecification toolReview = createToolReview();
+        AsyncToolSpecification toolObfuscate = createToolObfuscate();
 
-            // 5. Wire the transport into a Reactor Netty HTTP server bound to 127.0.0.1 (Localhost only)
-            var routerFunction = transportProvider.getRouterFunction();
-            var httpHandler = RouterFunctions.toHttpHandler(routerFunction);
-            var adapter = new ReactorHttpHandlerAdapter(httpHandler);
+        // 4. Build and configure the McpAsyncServer
+        //@formatter:off
+        @SuppressWarnings("unused")
+        McpAsyncServer server = McpServer
+                .async(transportProvider)
+                .serverInfo(McpSchema.Implementation.builder(MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER, MCP2AI.MCP2AI_VERSION)
+                        .title("MCP2AI Java SDK - Streamable HTTP Reference Server")
+                        .description("MCP2AI Java SDK reference implementation over Streamable HTTP transport (MCP2AI Spec 2025-03-26). "
+                                + "Exposes review and obfuscate tools to validate, review, and humanise AI assistant responses.")
+                        .build())
+                .capabilities(capabilities)
+                .tools(toolReview, toolObfuscate)
+                // Suppress SDK WARN "no consumers provided" - roots notifications are not used by this server
+                .rootsChangeHandlers(List.<BiFunction<McpAsyncServerExchange, List<Root>, Mono<Void>>>of(
+                        (exchange, roots) -> { 
+                            logger.debug("Roots changed (ignored): {}", roots); 
+                            return Mono.empty();
+                            }
+                        ))
+                .build();
+        //@formatter:on
 
-            // Run the MCP2AI Server
-            //@formatter:off
-            HttpServer.create()
-                    .host(STREAMABLE_HOST) // Security constraint: never bind to 0.0.0.0
-                    .port(Integer.valueOf(STREAMABLE_PORT))
-                    .handle(adapter)
-                    .bindNow();
-            //@formatter:on
+        // 5. Start an embedded Tomcat bound strictly to loopback, register the MCP servlet at /mcp.
+        Tomcat tomcat = new Tomcat();
+        // Avoid a tomcat.<port> directory in the current directory but use the temp directory
+        tomcat.setBaseDir(System.getProperty("java.io.tmpdir")); 
+        // Security advice: never bind to 0.0.0.0
+        tomcat.setHostname(host);
+        tomcat.setPort(port);
+        // Connector must be added before start(); Tomcat.getConnector() creates the default one.
+        tomcat.getConnector();
 
-            logger.info("{} started successfully and listening on {}", MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER,
-                    STREAMABLE_SERVER);
-            logger.info("  Streamable HTTP Endpoint: {}", STREAMABLE_SERVER + STREAMABLE_ENDPOINT);
+        // Empty docBase - no static files served; the servlet handles everything.
+        Context ctx = tomcat.addContext("", null);
+        // Register the transport servlet (async-capable) at the MCP endpoint.
+        Tomcat.addServlet(ctx, "mcp", transportProvider).setAsyncSupported(true);
+        ((StandardContext) ctx).addServletMappingDecoded(STREAMABLE_ENDPOINT, "mcp", false);
 
-            // Keep the main thread alive indefinitely to let background netty threads run
-            Mono.never().block();
-        } catch (Exception e) {
-            logger.error("Fatal error starting {}: {}", MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER, e.getMessage());
-            throw new RuntimeException(e);
-        }
+        // Start server
+        tomcat.start();
+
+        logger.info("{} started successfully and listening on {}", MCP2AI.MCP_JAVA_SDK_STREAMABLE_SERVER, serverAddress);
+        logger.info("  Streamable HTTP Endpoint: {}", serverAddress + STREAMABLE_ENDPOINT);
+
+        // Block the main thread indefinitely - Tomcat connector threads handle all requests.
+        tomcat.getServer().await();
     }
 
 }

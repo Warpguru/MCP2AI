@@ -16,20 +16,19 @@ import edu.java.util.ModelsDiscovery;
 import edu.java.util.ModelsDiscovery.ModelInfo;
 
 /**
- * Entry point and command dispatcher for the JavaOpenAI tutorial jar.
+ * Entry point and command dispatcher for the MCP2AI jar.
  *
  * <p>
- * Usage: {@code java -jar JavaOpenAI-x.y.z.jar <command>}
+ * Usage: {@code java -jar MCP2AI-x.y.z.jar <command>}
  *
  * <p>
- * Running without arguments prints the configured endpoint, a live list of available models with inferred capability tags, and
- * the command reference.
+ * Running without arguments prints the resolved configuration, a live list of available models, and the command reference.
  *
  * <p>
  * Available commands:
  * <ul>
- * <li>{@code config} - print resolved configuration (API key masked)</li>
- * <li>{@code streamableserver} - start streamable SSE MCP server</li>
+ * <li>{@code config} - print all resolved configuration values (API key masked) and list available models</li>
+ * <li>{@code streamableserver} - start the Streamable HTTP MCP server on the configured host and port</li>
  * </ul>
  */
 public class MCP2AI {
@@ -46,10 +45,15 @@ public class MCP2AI {
 
     /**
      * Main entry point.
-     * 
-     * @param args
+     *
+     * @param args command-line arguments; first element is the subcommand, remaining elements are forwarded to it
      */
     public static void main(final String[] args) {
+        // Install the Log4j2 JUL bridge so that java.util.logging calls from embedded Tomcat
+        // are routed through Log4j2 instead of printing directly to the console via JUL.
+        // Must be called before any JUL logger is created.
+        java.util.logging.LogManager.getLogManager().reset();
+        org.apache.logging.log4j.jul.Log4jBridgeHandler.install(false, "", true);
         new MCP2AI().process(args);
     }
 
@@ -57,6 +61,12 @@ public class MCP2AI {
     // Commands
     // -------------------------------------------------------------------------
 
+    /**
+     * Parses the first argument as a subcommand and dispatches to the appropriate handler, or prints usage when no arguments
+     * are supplied.
+     *
+     * @param args command-line arguments passed from {@link #main(String[])}
+     */
     private void process(final String[] args) {
         logger.info("=========================================================================");
         logger.info("                             MCP2AI Launcher                             ");
@@ -90,7 +100,7 @@ public class MCP2AI {
         logger.info("  streamableserver");
         logger.info("    -> Launches the stand-alone MCP2AI Server over Streamable HTTP (MCP Spec 2025-03-26).");
         logger.info("       Binds strictly to local loopback interface {}:{} (no arguments).",
-                StreamableSseServer.STREAMABLE_HOST, StreamableSseServer.STREAMABLE_PORT);
+                Config.getInstance().getStreamableHost(), Config.getInstance().getStreamablePort());
         logger.info("=========================================================================");
     }
 
@@ -98,17 +108,28 @@ public class MCP2AI {
     // Helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * Logs all resolved configuration values with the API key masked. Includes the four new keys added for system prompt paths
+     * and server bind address/port.
+     */
     private void runConfig() {
-        String baseUrl = Config.getBaseUrl();
-        String model = Config.getModel();
-        Float temperature = Config.getTemperature();
-        Integer timeout = Config.getTimeout();
+        Config cfg = Config.getInstance();
+        String baseUrl = cfg.getBaseUrl();
+        String model = cfg.getModel();
+        Float temperature = cfg.getTemperature();
+        Integer timeout = cfg.getTimeout();
+        String reviewPromptPath = cfg.getSystemPromptReviewPath();
+        String obfuscatePromptPath = cfg.getSystemPromptObfuscatePath();
         logger.info("Configuration:");
-        logger.info("  Base URL    : {}", Objects.isNull(baseUrl) ? PROPERTY_NOT_SET : baseUrl);
-        logger.info("  API Key     : {}", maskApiKey(Config.getApiKey()));
-        logger.info("  Model       : {}", Objects.isNull(model) ? PROPERTY_NOT_SET : model);
-        logger.info("  Temperature : {}", Objects.isNull(temperature) ? PROPERTY_NOT_SET : temperature);
-        logger.info("  Timeout     : {} s", Objects.isNull(timeout) ? PROPERTY_NOT_SET : timeout);
+        logger.info("  Base URL             : {}", Objects.isNull(baseUrl) ? PROPERTY_NOT_SET : baseUrl);
+        logger.info("  API Key              : {}", maskApiKey(cfg.getApiKey()));
+        logger.info("  Model                : {}", Objects.isNull(model) ? PROPERTY_NOT_SET : model);
+        logger.info("  Temperature          : {}", Objects.isNull(temperature) ? PROPERTY_NOT_SET : temperature);
+        logger.info("  Timeout              : {} s", Objects.isNull(timeout) ? PROPERTY_NOT_SET : timeout);
+        logger.info("  Review prompt file   : {}", Objects.isNull(reviewPromptPath) ? "(built-in default)" : reviewPromptPath);
+        logger.info("  Obfuscate prompt file: {}", Objects.isNull(obfuscatePromptPath) ? "(built-in default)" : obfuscatePromptPath);
+        logger.info("  Server host          : {}", cfg.getStreamableHost());
+        logger.info("  Server port          : {}", cfg.getStreamablePort());
     }
 
     /**

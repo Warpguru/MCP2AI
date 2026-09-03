@@ -1,5 +1,10 @@
 package edu.java.api;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,7 +20,7 @@ import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 
 /**
- * Wrapper around the OpenAI chat completions API providing LLM-based answer review.
+ * Wrapper around the OpenAI chat completions API providing LLM-based answer review and obfuscation.
  */
 public class OpenAIChat {
 
@@ -24,30 +29,41 @@ public class OpenAIChat {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Feedback returned when the client cannot be created or the API call fails entirely. The actual error detail is logged
-     * separately at ERROR level.
+     * Feedback returned when the review client cannot be created or the API call fails entirely. The actual error detail is
+     * logged separately at ERROR level.
      */
     private static final String FEEDBACK_REVIEW_UNAVAILABLE = "Review could not be performed: the reviewer LLM is unavailable or the request failed.";
 
+    /** Classpath resource containing the default review system prompt. */
+    private static final String REVIEWER_SYSTEM_PROMPT_RESOURCE = "SystemPrompt.Review.md";
+
     /**
-     * System prompt for the reviewer LLM used in {@link #review(String, String, String, Double)}.
+     * Default system prompt for the reviewer LLM, loaded once from {@value #REVIEWER_SYSTEM_PROMPT_RESOURCE} on the classpath.
      *
      * <p>
-     * Instructs the model to evaluate the assistant answer for correctness, completeness, and clarity and return a strict JSON
-     * response with {@code verdict}, {@code confidence}, and {@code feedback} fields.
+     * The prompt uses {@code {{user_message}}} and {@code {{assistant_message}}} placeholders that are substituted at call time
+     * in {@link #review(String, String, String, Double)}.
+     *
+     * <p>
+     * Falls back to an empty string if the resource cannot be read; a WARN is logged in that case.
      */
-    private static final String REVIEWER_SYSTEM_PROMPT = "You are a strict technical reviewer. You will be given an original user question\n"
-            + "and an AI-generated answer. Evaluate the answer for correctness, completeness,\n"
-            + "and clarity. Consider whether the answer fully addresses the question, whether\n"
-            + "any statements are factually wrong or misleading, and whether anything important\n"
-            + "is missing or could be improved.\n\n" + "Return a JSON object with exactly these fields:\n" + "{\n"
-            + "  \"verdict\": \"PASS\" | \"FAIL\" | \"PARTIAL\",\n" + "  \"confidence\": <float 0.0-1.0>,\n"
-            + "  \"feedback\": \"<specific explanation: what is correct, what is wrong or missing, "
-            + "what improvements are suggested>\"\n" + "}\n" + "Rules:\n"
-            + "- \"verdict\" must be exactly one of: PASS, FAIL, PARTIAL\n"
-            + "- \"confidence\" must be a float between 0.0 and 1.0\n"
-            + "- \"feedback\" must always explain the reasoning, even for PASS\n"
-            + "- Return only the JSON object. No preamble, no explanation outside the JSON.";
+    private static final String REVIEWER_SYSTEM_PROMPT = loadClasspathPrompt(REVIEWER_SYSTEM_PROMPT_RESOURCE);
+
+    /** Classpath resource containing the default obfuscate system prompt. */
+    private static final String OBFUSCATOR_SYSTEM_PROMPT_RESOURCE = "SystemPrompt.Obfuscate.md";
+
+    /**
+     * Default system prompt for the obfuscator LLM, loaded once from {@value #OBFUSCATOR_SYSTEM_PROMPT_RESOURCE} on the
+     * classpath.
+     *
+     * <p>
+     * The prompt uses the {@code {{assistant_message}}} placeholder that is substituted at call time in
+     * {@link #obfuscate(String, String, Double)}.
+     *
+     * <p>
+     * Falls back to an empty string if the resource cannot be read; a WARN is logged in that case.
+     */
+    private static final String OBFUSCATOR_SYSTEM_PROMPT = loadClasspathPrompt(OBFUSCATOR_SYSTEM_PROMPT_RESOURCE);
 
     /**
      * Submits a user message and an AI assistant answer to a second LLM for independent review.
@@ -96,13 +112,13 @@ public class OpenAIChat {
             if (client == null) {
                 throw new IllegalStateException("Endpoint may be undefined, unreachable");
             }
-            String userContent = "User message: " + userMessage + "\n\nAssistant answer to review:\n" + assistantMessage;
-            double effectiveTemp = (temperature != null) ? temperature : Config.getTemperature();
+            String systemPrompt = loadSystemPrompt(Config.getInstance().getSystemPromptReviewPath(), REVIEWER_SYSTEM_PROMPT)
+                    .replace("{{user_message}}", userMessage).replace("{{assistant_message}}", assistantMessage);
+            double effectiveTemp = (temperature != null) ? temperature : Config.getInstance().getTemperature();
             //@formatter:off
             ChatCompletionCreateParams params = ChatCompletionCreateParams
                     .builder()
-                    .addSystemMessage(REVIEWER_SYSTEM_PROMPT)
-                    .addUserMessage(userContent)
+                    .addSystemMessage(systemPrompt)
                     .model(model)
                     .temperature(effectiveTemp)
                     .responseFormat(ResponseFormatJsonObject.builder().build())
@@ -156,6 +172,153 @@ public class OpenAIChat {
             if (client != null) {
                 client.close();
             }
+        }
+    }
+
+    /**
+     * Rewrites an AI assistant answer so that automated AI-content detectors cannot reliably classify it as machine-generated.
+     *
+     * <p>
+     * The obfuscator is called with a single chat completion (not multi-turn). The {@code {{assistant_message}}} placeholder in
+     * the system prompt is substituted with {@code assistantMessage} before the call.
+     *
+     * <p>
+     * The response JSON from the LLM is parsed and returned as a {@link Map} with five fields:
+     * <ul>
+     * <li>{@code verdict} - {@code "PASS"} when the rewrite is faithful; {@code "FAIL"} if the transformation could not be
+     * completed</li>
+     * <li>{@code confidence} - double 0.0–1.0, the model's self-assessed certainty that the rewrite is faithful and
+     * undetectable</li>
+     * <li>{@code obfuscated} - the rewritten text, indistinguishable from human-authored writing</li>
+     * <li>{@code changes_summary} - one short paragraph describing the main categories of change made</li>
+     * <li>{@code model_used} - the {@code model} argument, for traceability</li>
+     * </ul>
+     *
+     * <p>
+     * If the model ignores the JSON format instruction ({@link JsonProcessingException}), or if the client cannot be created or
+     * the API call fails entirely, {@code verdict=FAIL} is returned with {@code obfuscated} set to the raw LLM text when
+     * available, or empty when no response was received. The full error is logged at WARN or ERROR level respectively.
+     *
+     * <p>
+     * {@link OpenAIClient#close()} is always called after the LLM call to release underlying resources.
+     *
+     * @param assistantMessage the AI assistant answer to be obfuscated
+     * @param model            model identifier passed to the API
+     * @param temperature      temperature for this call; {@code null} falls back to {@link Config#getTemperature()}
+     * @return obfuscation result map with {@code verdict}, {@code confidence}, {@code obfuscated}, {@code changes_summary},
+     *         {@code model_used}; {@code verdict=FAIL} on any error
+     */
+    public Map<String, Object> obfuscate(final String assistantMessage, final String model, final Double temperature) {
+        OpenAIClient client = null;
+        try {
+            client = ClientFactory.create();
+            if (client == null) {
+                throw new IllegalStateException("Endpoint may be undefined, unreachable");
+            }
+            String systemPrompt = loadSystemPrompt(Config.getInstance().getSystemPromptObfuscatePath(),
+                    OBFUSCATOR_SYSTEM_PROMPT).replace("{{assistant_message}}", assistantMessage);
+            double effectiveTemp = (temperature != null) ? temperature : Config.getInstance().getTemperature();
+            //@formatter:off
+            ChatCompletionCreateParams params = ChatCompletionCreateParams
+                    .builder()
+                    .addSystemMessage(systemPrompt)
+                    .model(model)
+                    .temperature(effectiveTemp)
+                    .responseFormat(ResponseFormatJsonObject.builder().build())
+                    .build();
+            //@formatter:on
+            logger.debug("Sending obfuscate request to model: {}", model);
+            //@formatter:off
+            ChatCompletion response = client
+                    .chat()
+                    .completions()
+                    .create(params);
+            //@formatter:on
+            String raw = response.choices().get(0).message().content().orElse("{}");
+            // Local models sometimes wrap JSON in markdown fences - strip them
+            raw = raw.replaceAll("(?s)```json\\s*(.*?)\\s*```", "$1").trim();
+            raw = raw.replaceAll("(?s)```\\s*(.*?)\\s*```", "$1").trim();
+            logger.debug("Obfuscate raw response: {}", raw);
+
+            try {
+                JsonNode node = objectMapper.readTree(raw);
+                String verdict = node.get("verdict").asText();
+                double confidence = node.get("confidence").asDouble();
+                String obfuscated = node.get("obfuscated").asText();
+                String changesSummary = node.get("changes_summary").asText();
+                Map<String, Object> result = new HashMap<>();
+                result.put("verdict", verdict);
+                result.put("confidence", confidence);
+                result.put("obfuscated", obfuscated);
+                result.put("changes_summary", changesSummary);
+                result.put("model_used", model);
+                return result;
+            } catch (JsonProcessingException e) {
+                // Model ignored the format instruction - raw text is still useful as obfuscated value
+                logger.warn("Obfuscate response could not be parsed as JSON, returning FAIL: {}", e.getMessage());
+                Map<String, Object> fail = new HashMap<>();
+                fail.put("verdict", ReviewVerdict.FAIL.name());
+                fail.put("confidence", 0.0);
+                fail.put("obfuscated", raw);
+                fail.put("changes_summary", "");
+                fail.put("model_used", model);
+                return fail;
+            }
+        } catch (Exception e) {
+            // Return empty obfuscated to save bandwidth; verdict=FAIL signals the caller that the call failed
+            logger.error("Obfuscate request failed - obfuscator LLM unavailable or request error: model={}, error={}", model,
+                    e.getMessage(), e);
+            Map<String, Object> fail = new HashMap<>();
+            fail.put("verdict", ReviewVerdict.FAIL.name());
+            fail.put("confidence", 1.0);
+            fail.put("obfuscated", "");
+            fail.put("changes_summary", "");
+            fail.put("model_used", model);
+            return fail;
+        } finally {
+            if (client != null) {
+                client.close();
+            }
+        }
+    }
+
+    /**
+     * Loads a system prompt resource from the classpath. Called once at class initialisation to populate
+     * {@link #REVIEWER_SYSTEM_PROMPT} and {@link #OBFUSCATOR_SYSTEM_PROMPT}.
+     *
+     * @param resource classpath resource name (no leading slash)
+     * @return the resource content as a UTF-8 string, or an empty string if the resource is missing or unreadable
+     */
+    private static String loadClasspathPrompt(final String resource) {
+        try (InputStream is = OpenAIChat.class.getClassLoader().getResourceAsStream(resource)) {
+            if (is == null) {
+                logger.warn("Classpath resource '{}' not found - review system prompt will be empty", resource);
+                return "";
+            }
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            logger.warn("Could not read classpath resource '{}': {}", resource, e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * Loads a system prompt from an external file, falling back to a built-in default when the path is not configured or the
+     * file cannot be read.
+     *
+     * @param filePath path to the external prompt file, or {@code null} if not configured
+     * @param fallback the built-in default prompt to use when the file is absent or unreadable
+     * @return the prompt text to use, never {@code null}
+     */
+    private static String loadSystemPrompt(final String filePath, final String fallback) {
+        if (filePath == null) {
+            return fallback;
+        }
+        try {
+            return Files.readString(Path.of(filePath));
+        } catch (IOException e) {
+            logger.warn("Could not read system prompt file '{}', using built-in default: {}", filePath, e.getMessage());
+            return fallback;
         }
     }
 

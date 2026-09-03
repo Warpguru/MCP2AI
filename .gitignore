@@ -27,3 +27,7 @@ replay_pid*
 # Local OpenAI config (copy from config.properties.example)
 config.properties
 /dependency-reduced-pom.xml
+# Embedded Tomcat runtime work directory
+tomcat.*/
+# OSGi metadata extracted from SDK jars during development
+/OSGI-INF/
