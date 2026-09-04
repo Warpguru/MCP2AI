@@ -113,23 +113,33 @@ public class MCP2AI {
      * and server bind address/port.
      */
     private void runConfig() {
-        Config cfg = Config.getInstance();
-        String baseUrl = cfg.getBaseUrl();
-        String model = cfg.getModel();
-        Float temperature = cfg.getTemperature();
-        Integer timeout = cfg.getTimeout();
-        String reviewPromptPath = cfg.getSystemPromptReviewPath();
-        String obfuscatePromptPath = cfg.getSystemPromptObfuscatePath();
+        Config config = Config.getInstance();
+        String baseUrl = config.getBaseUrl();
+        String model = config.getModel();
+        Float temperature = config.getTemperature();
+        Integer timeout = config.getTimeout();
+        String reviewPromptPath = config.getSystemPromptReviewPath();
+        String obfuscatePromptPath = config.getSystemPromptObfuscatePath();
+        String obfuscateTemplatePath = config.getSystemPromptObfuscateTemplatePath();
         logger.info("Configuration:");
         logger.info("  Base URL             : {}", Objects.isNull(baseUrl) ? PROPERTY_NOT_SET : baseUrl);
-        logger.info("  API Key              : {}", maskApiKey(cfg.getApiKey()));
+        logger.info("  API Key              : {}", maskApiKey(config.getApiKey()));
         logger.info("  Model                : {}", Objects.isNull(model) ? PROPERTY_NOT_SET : model);
         logger.info("  Temperature          : {}", Objects.isNull(temperature) ? PROPERTY_NOT_SET : temperature);
         logger.info("  Timeout              : {} s", Objects.isNull(timeout) ? PROPERTY_NOT_SET : timeout);
         logger.info("  Review prompt file   : {}", Objects.isNull(reviewPromptPath) ? "(built-in default)" : reviewPromptPath);
-        logger.info("  Obfuscate prompt file: {}", Objects.isNull(obfuscatePromptPath) ? "(built-in default)" : obfuscatePromptPath);
-        logger.info("  Server host          : {}", cfg.getStreamableHost());
-        logger.info("  Server port          : {}", cfg.getStreamablePort());
+        logger.info("  Obfuscate prompt file: {}",
+                Objects.isNull(obfuscatePromptPath) ? "(built-in default)" : obfuscatePromptPath);
+        logger.info("  Obfuscate style file : {}", Objects.isNull(obfuscateTemplatePath) ? "(not set)" : obfuscateTemplatePath);
+        if (obfuscateTemplatePath != null) {
+            boolean sufficient = Config.loadAndValidateStyleTemplate(obfuscateTemplatePath) != null;
+            if (sufficient) {
+                logger.info("  -> Style template: sufficient (>= {} words)", Config.STYLE_TEMPLATE_MIN_WORDS);
+            }
+            // loadAndValidateStyleTemplate already logs WARN/ERROR for too-short or unreadable files
+        }
+        logger.info("  Server host          : {}", config.getStreamableHost());
+        logger.info("  Server port          : {}", config.getStreamablePort());
     }
 
     /**

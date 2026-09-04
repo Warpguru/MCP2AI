@@ -17,18 +17,18 @@ Both tools delegate to the same configured LLM endpoint and share a single serve
 
 ### To run MCP2AI (required)
 
-- **Java 21** — [download](https://jdk.java.net/java-se-ri/21) or install via your package manager
+- **Java 21** - [download](https://jdk.java.net/java-se-ri/21) or install via your package manager
 
 ### To build from source (optional)
 
-- **Maven 3.9+** — [download](https://maven.apache.org/download.cgi)
+- **Maven 3.9+** - [download](https://maven.apache.org/download.cgi)
 
 > On this machine, Java and Maven can be added to the `PATH` for the current session by running:
 > ```cmd
 > D:\Development\SetupEnvJava21.cmd
 > D:\Development\SetupEnvMaven.cmd
 > ```
-> These are local convenience scripts — they are not required on other machines where Java 21 and Maven are already on the `PATH`.
+> These are local convenience scripts - they are not required on other machines where Java 21 and Maven are already on the `PATH`.
 
 ---
 
@@ -60,9 +60,9 @@ The server exposes both tools over **Streamable HTTP** (MCP Spec 2025-03-26) on 
 
 ## Registering with Bob
 
-Two separate registration steps are required — the MCP server and the skills are independent:
+Two separate registration steps are required - the MCP server and the skills are independent:
 
-### Step 1 — Register the MCP server
+### Step 1 - Register the MCP server
 
 Add the following entry to your Bob MCP configuration file (`%APPDATA%\Roaming\Code\User\globalStorage\IBM.wca-code\settings\mcp.json` on Windows):
 
@@ -78,7 +78,7 @@ Add the following entry to your Bob MCP configuration file (`%APPDATA%\Roaming\C
 }
 ```
 
-> **`alwaysAllow`** lists the tool names that Bob may call without prompting for confirmation. Both `review` and `obfuscate` are safe to allow unconditionally — they only read the text you pass and never modify any file or system state.
+> **`alwaysAllow`** lists the tool names that Bob may call without prompting for confirmation. Both `review` and `obfuscate` are safe to allow unconditionally - they only read the text you pass and never modify any file or system state.
 >
 > **`timeout`** is set to 120 000 ms (2 minutes) to match `OPENAI_TIMEOUT`. Increase both values together if you use a slow local model.
 >
@@ -86,9 +86,9 @@ Add the following entry to your Bob MCP configuration file (`%APPDATA%\Roaming\C
 
 After saving the file, restart Bob (or reload the MCP servers).
 
-### Step 2 — Install the Bob skills
+### Step 2 - Install the Bob skills
 
-Bob skills are **workspace-scoped** — they must be present inside the `.bob/skills/` folder of each workspace where you want to use them. This repository already contains both skill files:
+Bob skills are **workspace-scoped** - they must be present inside the `.bob/skills/` folder of each workspace where you want to use them. This repository already contains both skill files:
 
 ```
 .bob/skills/
@@ -102,14 +102,14 @@ Because the files are already part of this repository, **no additional installat
 
 If you want to use the skills in a **different workspace**, the skill files are available in two ways:
 
-**From a source checkout** — copy the folders directly:
+**From a source checkout** - copy the folders directly:
 
 ```cmd
 xcopy /E /I .bob\skills\mcp-review   <target-workspace>\.bob\skills\mcp-review
 xcopy /E /I .bob\skills\mcp-obfuscate <target-workspace>\.bob\skills\mcp-obfuscate
 ```
 
-**From the jar only** — the skills are bundled inside the jar under `.bob/skills/`. Extract them with:
+**From the jar only** - the skills are bundled inside the jar under `.bob/skills/`. Extract them with:
 
 ```cmd
 jar xf MCP2AI-x.y.z.jar .bob/skills/mcp-review .bob/skills/mcp-obfuscate
@@ -119,7 +119,7 @@ xcopy /E /I .bob\skills\mcp-obfuscate <target-workspace>\.bob\skills\mcp-obfusca
 
 Then restart Bob in that workspace.
 
-### Step 3 — Start MCP2AI and verify
+### Step 3 - Start MCP2AI and verify
 
 ```cmd
 java -jar target\MCP2AI-x.y.z.jar streamableserver
@@ -127,7 +127,7 @@ java -jar target\MCP2AI-x.y.z.jar streamableserver
 
 Bob will advertise `mcp__mcp-to-ai__review` and `mcp__mcp-to-ai__obfuscate` as available tools.
 
-### Step 4 — Use the skills
+### Step 4 - Use the skills
 
 The quickest way to invoke both tools is via slash commands in any Bob chat:
 
@@ -136,7 +136,7 @@ The quickest way to invoke both tools is via slash commands in any Bob chat:
 /mcp-obfuscate <paste AI-generated text here>
 ```
 
-Full details — activation phrases, example output, and real-world session traces — are covered in the [Bob Skill: `/mcp-review`](#bob-skill-mcp-review) and [Bob Skill: `/mcp-obfuscate`](#bob-skill-mcp-obfuscate) sections above.
+Full details - activation phrases, example output, and real-world session traces - are covered in the [Bob Skill: `/mcp-review`](#bob-skill-mcp-review) and [Bob Skill: `/mcp-obfuscate`](#bob-skill-mcp-obfuscate) sections above.
 
 ---
 
@@ -308,7 +308,7 @@ Copy one of the ready-made templates to `src/main/resources/config.properties`:
 | `config.properties.openai` | OpenAI cloud | `copy src\main\resources\config.properties.openai src\main\resources\config.properties` |
 | `config.properties.ollama` | Ollama (local) | `copy src\main\resources\config.properties.ollama src\main\resources\config.properties` |
 | `config.properties.lmstudio` | LM Studio (local) | `copy src\main\resources\config.properties.lmstudio src\main\resources\config.properties` |
-| `config.properties.example` | Generic template | `copy src\main\resources\config.properties.example src\main\resources\config.properties` |
+| `config.properties.template` | Generic template | `copy src\main\resources\config.properties.template src\main\resources\config.properties` |
 
 > `config.properties` is gitignored and will never be committed. All templates are in `src/main/resources/`.
 
@@ -323,8 +323,11 @@ Copy one of the ready-made templates to `src/main/resources/config.properties`:
 | `OPENAI_TIMEOUT` | `120` | Request timeout in seconds (2 minutes); increase for slow local models |
 | `OPENAI_SYSTEMPROMPT_REVIEW` | *(built-in)* | Fully qualified path to a text file overriding the built-in review system prompt |
 | `OPENAI_SYSTEMPROMPT_OBFUSCATE` | *(built-in)* | Fully qualified path to a text file overriding the built-in obfuscate system prompt |
+| `OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE` | *(not set)* | Fully qualified path to a plain-text file containing prose the author has written themselves (emails, articles, notes — anything in their natural voice). Used by the `obfuscate` tool to steer the rewrite toward the author's personal style. Must contain at least 800 words; shorter files are ignored. Word count is validated and reported by the `config` command. |
 | `MCP_STREAMABLE_HOST` | `127.0.0.1` | Bind address for the embedded HTTP server |
 | `MCP_STREAMABLE_PORT` | `8081` | Bind port for the embedded HTTP server |
+
+> **About `OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE`:** despite the `SYSTEMPROMPT` prefix this key does **not** override the system prompt — it supplies an *additional* writing style sample that is appended to the prompt at runtime. The 800-word minimum exists because AI-content detectors score on statistical patterns; a short snippet does not give the model enough signal to reliably match the author's sentence rhythms, vocabulary distribution, and paragraph habits. Anything the author has written naturally — blog posts, technical write-ups, emails — works well.
 
 ### Resolution order
 
@@ -477,7 +480,7 @@ src/main/resources/
 ├── SystemPrompt.Review.md               # Default review system prompt (loaded from classpath; overridable via OPENAI_SYSTEMPROMPT_REVIEW)
 ├── SystemPrompt.Obfuscate.md            # Default obfuscate system prompt (loaded from classpath; overridable via OPENAI_SYSTEMPROMPT_OBFUSCATE)
 ├── config.properties                    # Active config (gitignored)
-├── config.properties.example            # Generic configuration template
+├── config.properties.template            # Generic configuration template
 ├── config.properties.openai             # Ready-to-use OpenAI cloud template
 ├── config.properties.ollama             # Ready-to-use Ollama local template
 └── config.properties.lmstudio           # Ready-to-use LM Studio local template

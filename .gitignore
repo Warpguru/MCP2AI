@@ -24,8 +24,9 @@ hs_err_pid*
 replay_pid*
 /target/
 
-# Local OpenAI config (copy from config.properties.example)
+# Local OpenAI config (copy from config.properties.template)
 config.properties
+Style template.*.md
 /dependency-reduced-pom.xml
 # Embedded Tomcat runtime work directory
 tomcat.*/

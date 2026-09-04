@@ -1,11 +1,13 @@
 package edu.java.api;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Centralised configuration loader - singleton.
@@ -21,8 +23,8 @@ import java.util.Properties;
  *
  * <p>
  * Every getter always returns a non-null, non-empty string. {@code config.properties} is gitignored - copy
- * {@code config.properties.example} to create it. If the file is absent, only environment variables and hard-coded defaults are
- * used.
+ * {@code config.properties.template} to create it. If the file is absent, only environment variables and hard-coded defaults
+ * are used.
  */
 public class Config {
 
@@ -64,6 +66,9 @@ public class Config {
     /** Configuration key - fully qualified path to the obfuscate system prompt file. */
     private static final String KEY_SYSTEMPROMPT_OBFUSCATE = "OPENAI_SYSTEMPROMPT_OBFUSCATE";
 
+    /** Configuration key - fully qualified path to an optional file containing a sample of the author's writing style. */
+    private static final String KEY_SYSTEMPROMPT_OBFUSCATE_TEMPLATE = "OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE";
+
     /** Configuration key - bind address for the embedded HTTP server. */
     private static final String KEY_STREAMABLE_HOST = "MCP_STREAMABLE_HOST";
 
@@ -77,15 +82,17 @@ public class Config {
     private static final int KEY_STREAMABLE_PORT_DEFAULT = 8081;
 
     /**
+     * Minimum number of words an author style-template file must contain to be usable. Files below this threshold are ignored
+     * with a warning.
+     */
+    public static final int STYLE_TEMPLATE_MIN_WORDS = 800;
+
+    /**
      * Private constructor - loads {@code config.properties} from the classpath.
      */
     private Config() {
         this.properties = loadProperties();
     }
-
-    // -------------------------------------------------------------------------
-    // Singleton access
-    // -------------------------------------------------------------------------
 
     /**
      * Returns the singleton {@link Config} instance, creating it on first call.
@@ -106,6 +113,38 @@ public class Config {
         return instance;
     }
 
+    /**
+     * Loads the optional author style-template file and validates that it meets the minimum word count.
+     *
+     * <p>
+     * This is the single authoritative implementation used by both the config reporter and the obfuscate call path. Returns the
+     * trimmed file content when the path is non-null, the file is readable, and the content contains at least
+     * {@value #STYLE_TEMPLATE_MIN_WORDS} words. Returns {@code null} in all other cases.
+     *
+     * @param filePath path to the style template file, or {@code null} if not configured
+     * @return trimmed file content, or {@code null} if absent, unreadable, or too short
+     */
+    public static String loadAndValidateStyleTemplate(final String filePath) {
+        if (filePath == null) {
+            return null;
+        }
+        String content;
+        try {
+            content = Files.readString(Path.of(filePath)).trim();
+        } catch (IOException e) {
+            logger.error("Could not read style template file '{}': {}", filePath, e.getMessage());
+            return null;
+        }
+        int wordCount = content.isBlank() ? 0 : content.split("\\s+").length;
+        if (wordCount < STYLE_TEMPLATE_MIN_WORDS) {
+            logger.warn("Style template '{}' is too short ({} words); minimum is {} words - template will be ignored", filePath,
+                    wordCount, STYLE_TEMPLATE_MIN_WORDS);
+            return null;
+        }
+        logger.debug("Style template loaded: {} words from '{}'", wordCount, filePath);
+        return content;
+    }
+    
     // -------------------------------------------------------------------------
     // Typed getters
     // -------------------------------------------------------------------------
@@ -182,13 +221,26 @@ public class Config {
      * Fully qualified path to an external file containing the obfuscate system prompt.
      *
      * <p>
-     * When {@code null}, callers must fall back to their built-in default prompt. No call site is wired yet - this getter is
-     * prepared for the future obfuscate tool.
+     * When {@code null}, callers must fall back to their built-in default prompt.
      *
      * @return configured path string, or {@code null} if absent or empty
      */
     public String getSystemPromptObfuscatePath() {
         String v = getAsString(KEY_SYSTEMPROMPT_OBFUSCATE);
+        return (v != null && !v.isEmpty()) ? v : null;
+    }
+
+    /**
+     * Fully qualified path to an optional text file containing a sample of the author's writing style.
+     *
+     * <p>
+     * When present and the file contains at least the minimum word count, its content is appended to the obfuscate system
+     * prompt so the secondary LLM can adapt its rewrite toward the author's personal voice.
+     *
+     * @return configured path string, or {@code null} if absent or empty
+     */
+    public String getSystemPromptObfuscateTemplatePath() {
+        String v = getAsString(KEY_SYSTEMPROMPT_OBFUSCATE_TEMPLATE);
         return (v != null && !v.isEmpty()) ? v : null;
     }
 
@@ -254,7 +306,7 @@ public class Config {
      * @param key the configuration key
      * @return trimmed value, or {@code null} if absent in all sources
      */
-    public String getAsString(String key) {
+    private String getAsString(String key) {
         // 1. Java system property (-Dkey=value)
         String sysProp = System.getProperty(key);
         if (sysProp != null && !sysProp.isBlank()) {
@@ -279,7 +331,7 @@ public class Config {
      * @param key the configuration key
      * @return parsed {@link Float}, or {@code null} if absent in all sources
      */
-    public Float getAsFloat(String key) {
+    private Float getAsFloat(String key) {
         // 1. Java system property (-Dkey=value)
         String sysProp = System.getProperty(key);
         if (sysProp != null && !sysProp.isBlank()) {
@@ -304,7 +356,7 @@ public class Config {
      * @param key the configuration key
      * @return parsed int, or {@code -1} if absent in all sources
      */
-    public Integer getAsInteger(String key) {
+    private Integer getAsInteger(String key) {
         // 1. Java system property (-Dkey=value)
         String systemProperties = System.getProperty(key);
         if (systemProperties != null && !systemProperties.isBlank()) {

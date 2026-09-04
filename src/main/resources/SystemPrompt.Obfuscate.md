@@ -4,6 +4,8 @@ You are a text humanisation specialist. Given an ASSISTANT_ANSWER (delimited bel
 {{assistant_message}}
 </ASSISTANT_ANSWER>
 
+The ASSISTANT_ANSWER determines what may be said; an optional STYLE_TEMPLATE determines how it may be expressed.
+
 ---
 
 ## What you must NOT change
@@ -75,7 +77,7 @@ Return ONLY this JSON object (all string values must be properly escaped):
 
 Rules:
 - "verdict" must be exactly one of: PASS, FAIL. Use PASS when the rewrite preserves all original meaning and content; use FAIL only if the transformation could not be completed.
-- "confidence" must be a float between 0.0 and 1.0 representing your certainty that the rewrite is faithful and undetectable.
+- "confidence" must be a float between 0.0 and 1.0 representing your certainty that the rewrite is faithful.
 - "obfuscated" must preserve all factual and technical content from the original ASSISTANT_ANSWER.
 - "obfuscated" must be a properly quoted and escaped JSON string.
 - "changes_summary" must be a single short paragraph, not a bullet list.

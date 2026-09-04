@@ -37,11 +37,14 @@ OPENAI_TEMPERATURE=0.01
 # Lower this for interactive use; raise it for slow local models.
 OPENAI_TIMEOUT=120
 
-# Fully qualified path to system prompt for review tool (default: hardcoded)
+# Fully qualified path to system prompt for review tool (default: hardcoded SystemPrompt.Review.md)
 OPENAI_SYSTEMPROMPT_REVIEW=
 
-# Fully qualified path to system prompt for obfuscate tool (default: hardcoded)
+# Fully qualified path to system prompt for obfuscate tool (default: hardcoded SystemPrompt.Obfuscate.md)
 OPENAI_SYSTEMPROMPT_OBFUSCATE=
+
+# Fully qualified path to a template containing optional text in the user's writing style
+OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE=
 
 # IP address or hostname to bin internal HTTP server  (default: 127.0.0.1)
 MCP_STREAMABLE_HOST=

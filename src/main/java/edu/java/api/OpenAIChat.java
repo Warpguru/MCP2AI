@@ -29,6 +29,16 @@ public class OpenAIChat {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
+     * Appended to the obfuscate system prompt when a valid style template is loaded. Uses the {@code {{style_template}}}
+     * placeholder which is substituted with the file content at call time.
+     */
+    private static final String STYLE_TEMPLATE_SECTION = "\n\n---\n\n" + "## Author writing style\n\n"
+            + "The text below is a writing sample by the author. "
+            + "Use it as a reference for sentence rhythm, vocabulary, paragraph length, "
+            + "and any characteristic phrasing. Bring the rewritten text closer to this voice "
+            + "without copying specific sentences.\n\n" + "<STYLE_TEMPLATE>\n{{style_template}}\n</STYLE_TEMPLATE>";
+
+    /**
      * Feedback returned when the review client cannot be created or the API call fails entirely. The actual error detail is
      * logged separately at ERROR level.
      */
@@ -206,7 +216,9 @@ public class OpenAIChat {
      * @param model            model identifier passed to the API
      * @param temperature      temperature for this call; {@code null} falls back to {@link Config#getTemperature()}
      * @return obfuscation result map with {@code verdict}, {@code confidence}, {@code obfuscated}, {@code changes_summary},
-     *         {@code model_used}; {@code verdict=FAIL} on any error
+     *         {@code model_used}; {@code verdict=FAIL} on any error; when a valid style template is configured via
+     *         {@code OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE} the rewrite is additionally guided toward the author's personal
+     *         voice
      */
     public Map<String, Object> obfuscate(final String assistantMessage, final String model, final Double temperature) {
         OpenAIClient client = null;
@@ -217,6 +229,12 @@ public class OpenAIChat {
             }
             String systemPrompt = loadSystemPrompt(Config.getInstance().getSystemPromptObfuscatePath(),
                     OBFUSCATOR_SYSTEM_PROMPT).replace("{{assistant_message}}", assistantMessage);
+            // Append style-template section when a valid author writing sample is configured
+            String styleTemplate = loadStyleTemplate(Config.getInstance().getSystemPromptObfuscateTemplatePath());
+            if (styleTemplate != null) {
+                systemPrompt = systemPrompt + STYLE_TEMPLATE_SECTION.replace("{{style_template}}", styleTemplate);
+                logger.debug("Author style template appended to obfuscate system prompt");
+            }
             double effectiveTemp = (temperature != null) ? temperature : Config.getInstance().getTemperature();
             //@formatter:off
             ChatCompletionCreateParams params = ChatCompletionCreateParams
@@ -320,6 +338,16 @@ public class OpenAIChat {
             logger.warn("Could not read system prompt file '{}', using built-in default: {}", filePath, e.getMessage());
             return fallback;
         }
+    }
+
+    /**
+     * Delegates to {@link Config#loadAndValidateStyleTemplate(String)} - single authoritative implementation.
+     *
+     * @param filePath path to the style template file, or {@code null} if not configured
+     * @return trimmed file content, or {@code null} if absent, unreadable, or too short
+     */
+    private static String loadStyleTemplate(final String filePath) {
+        return Config.loadAndValidateStyleTemplate(filePath);
     }
 
 }
