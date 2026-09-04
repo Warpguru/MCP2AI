@@ -119,13 +119,29 @@ xcopy /E /I .bob\skills\mcp-obfuscate <target-workspace>\.bob\skills\mcp-obfusca
 
 Then restart Bob in that workspace.
 
-### Step 3 - Start MCP2AI and verify
+### Step 3 - Configure and start MCP2AI
 
+MCP2AI needs to know which LLM to call. The quickest way - without any config file - is to pass the settings directly on the command line:
+
+**Local Ollama model:**
 ```cmd
-java -jar target\MCP2AI-x.y.z.jar streamableserver
+java -DOPENAI_BASE_URL=http://localhost:11434/v1 -DOPENAI_MODEL=llama3.2:3b -DOPENAI_API_KEY=local -jar MCP2AI-x.y.z.jar streamableserver
 ```
 
-Bob will advertise `mcp__mcp-to-ai__review` and `mcp__mcp-to-ai__obfuscate` as available tools.
+**OpenAI cloud model:**
+```cmd
+java -DOPENAI_BASE_URL=https://api.openai.com/v1 -DOPENAI_MODEL=gpt-4o-mini -DOPENAI_API_KEY=sk-... -jar MCP2AI-x.y.z.jar streamableserver
+```
+
+Run with `config` instead of `streamableserver` first to verify the resolved settings and confirm the endpoint is reachable before connecting Bob:
+
+```cmd
+java -DOPENAI_BASE_URL=... -DOPENAI_MODEL=... -DOPENAI_API_KEY=... -jar MCP2AI-x.y.z.jar config
+```
+
+For persistent configuration using a `config.properties` file or environment variables, see the [Configuration](#configuration) section. If you have cloned the repository, the [Local Server Setup](#local-server-setup) and [Cloud Provider Setup](#cloud-provider-setup) sections provide ready-to-use templates.
+
+Bob will then advertise `mcp__mcp-to-ai__review` and `mcp__mcp-to-ai__obfuscate` as available tools.
 
 ### Step 4 - Use the skills
 
@@ -323,11 +339,11 @@ Copy one of the ready-made templates to `src/main/resources/config.properties`:
 | `OPENAI_TIMEOUT` | `120` | Request timeout in seconds (2 minutes); increase for slow local models |
 | `OPENAI_SYSTEMPROMPT_REVIEW` | *(built-in)* | Fully qualified path to a text file overriding the built-in review system prompt |
 | `OPENAI_SYSTEMPROMPT_OBFUSCATE` | *(built-in)* | Fully qualified path to a text file overriding the built-in obfuscate system prompt |
-| `OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE` | *(not set)* | Fully qualified path to a plain-text file containing prose the author has written themselves (emails, articles, notes — anything in their natural voice). Used by the `obfuscate` tool to steer the rewrite toward the author's personal style. Must contain at least 800 words; shorter files are ignored. Word count is validated and reported by the `config` command. |
+| `OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE` | *(not set)* | Fully qualified path to a plain-text file containing prose the author has written themselves (emails, articles, notes - anything in their natural voice). Used by the `obfuscate` tool to steer the rewrite toward the author's personal style. Must contain at least 800 words; shorter files are ignored. Word count is validated and reported by the `config` command. |
 | `MCP_STREAMABLE_HOST` | `127.0.0.1` | Bind address for the embedded HTTP server |
 | `MCP_STREAMABLE_PORT` | `8081` | Bind port for the embedded HTTP server |
 
-> **About `OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE`:** despite the `SYSTEMPROMPT` prefix this key does **not** override the system prompt — it supplies an *additional* writing style sample that is appended to the prompt at runtime. The 800-word minimum exists because AI-content detectors score on statistical patterns; a short snippet does not give the model enough signal to reliably match the author's sentence rhythms, vocabulary distribution, and paragraph habits. Anything the author has written naturally — blog posts, technical write-ups, emails — works well.
+> **About `OPENAI_SYSTEMPROMPT_OBFUSCATE_TEMPLATE`:** despite the `SYSTEMPROMPT` prefix this key does **not** override the system prompt - it supplies an *additional* writing style sample that is appended to the prompt at runtime. The 800-word minimum exists because AI-content detectors score on statistical patterns; a short snippet does not give the model enough signal to reliably match the author's sentence rhythms, vocabulary distribution, and paragraph habits. Anything the author has written naturally - blog posts, technical write-ups, emails - works well.
 
 ### Resolution order
 
